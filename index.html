@@ -41,7 +41,7 @@
   .sub{ color:#9fb0c0; font-size:0.9rem; margin:0 0 18px; }
 
   label.field{ display:block; font-weight:700; margin:16px 0 6px; color:#fff; font-size:0.95rem; }
-  select, textarea, input[type=text]{
+  select, textarea, input[type=text], input[type=password]{
     width:100%; background:var(--black); color:var(--gray);
     border:2px solid var(--steel); border-radius:10px;
     padding:12px 14px; font-family:inherit; font-size:1rem; min-height:48px;
@@ -108,6 +108,7 @@
     font-family:'Raleway',sans-serif; font-weight:700; cursor:pointer; border:2px solid var(--steel);
     background:var(--black); color:var(--gray); }
   .toolbar button.primary{ background:var(--blue); color:var(--black); border-color:var(--blue); }
+  .toolbar button.gold{ background:var(--gold); color:var(--black); border-color:var(--gold); }
   .status-box{ padding:10px 14px; border-radius:8px; background:#14202b; border:1px solid var(--steel); margin-bottom:12px; color:var(--gold); font-size:0.95rem; }
 
   @media (max-width:720px){
@@ -140,7 +141,7 @@
   <section class="panel">
     <details id="setupBox">
       <summary style="cursor:pointer; font-family:'Bebas Neue',sans-serif; font-size:1.6rem; color:var(--blue); letter-spacing:1px;">Keys and Setup</summary>
-      <p class="sub" style="margin-top:12px;">Paste your keys once. They stay in this browser only, never shown to anyone else. The two Supabase values remember your lineups. The Gemini value writes the episodes.</p>
+      <p class="sub" style="margin-top:12px;">Paste your keys once. They stay in this browser only, never shown to anyone else. Supabase remembers your lineups, Gemini writes episodes, and ElevenLabs renders real audio.</p>
       <div id="setupFields"></div>
       <div id="setupMsg"></div>
     </details>
@@ -148,7 +149,7 @@
 
   <section class="panel">
     <h2>The Table</h2>
-    <p class="sub">Pick a show, seat one to four hosts, and give each one a voice.</p>
+    <p class="sub">Pick a show, seat one to four hosts, and configure their voices and personas.</p>
 
     <label class="field" for="showSel">Show</label>
     <select id="showSel"></select>
@@ -169,7 +170,7 @@
 
   <section class="panel">
     <h2>Source</h2>
-    <p class="sub">Drop in a topic, your notes, an outline, or a whole blog post. This is what the hosts will talk about.</p>
+    <p class="sub">Drop in a topic, your notes, an outline, or a whole article. This is what the hosts will talk about.</p>
 
     <label class="field" for="sourceBox">Source material</label>
     <textarea id="sourceBox" rows="7" placeholder="Paste your topic, notes, outline, or article here."></textarea>
@@ -201,14 +202,14 @@
   </section>
 
   <section class="panel">
-    <h2>The Script</h2>
+    <h2>The Script & Voices</h2>
     <div id="ttsStatus" class="status-box" style="display:none;"></div>
     <div class="toolbar" id="toolbar" style="display:none;">
-      <button class="primary" id="playBtn">Play aloud (Kokoro AI)</button>
-      <button id="playDeviceBtn">Play browser voices</button>
+      <button class="gold" id="playElevenBtn">Play (ElevenLabs API)</button>
+      <button class="primary" id="playKokoroBtn">Play (Kokoro Free AI)</button>
       <button id="stopBtn">Stop</button>
       <button id="copyBtn">Copy script</button>
-      <button id="moreBtn">Write the next section</button>
+      <button id="moreBtn">Write next section</button>
       <button id="clearBtn">Clear</button>
     </div>
     <div id="output"><p class="empty">Your generated conversation will show up here.</p></div>
@@ -223,6 +224,7 @@ import { KokoroTTS } from "https://cdn.jsdelivr.net/npm/kokoro-js@1.1.0/dist/kok
 var SUPABASE_URL      = "PASTE_YOUR_PROJECT_URL_HERE";
 var SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
 var GEMINI_API_KEY    = "PASTE_YOUR_GEMINI_KEY_HERE";
+var ELEVEN_API_KEY    = "";
 var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
 
 (function(){
@@ -233,6 +235,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   var kokoroLoading = false;
   var audioContext = null;
   var currentSource = null;
+  var activeAudioElement = null;
 
   function loadSettings(){ try{ return JSON.parse(localStorage.getItem("mhs_settings")||"{}"); }catch(e){ return {}; } }
   function saveSettings(o){ try{ localStorage.setItem("mhs_settings", JSON.stringify(o)); }catch(e){} }
@@ -242,6 +245,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   function gSupaUrl(){ return SET.supaUrl || (notPlaceholder(SUPABASE_URL) ? SUPABASE_URL : ""); }
   function gSupaKey(){ return SET.supaKey || (notPlaceholder(SUPABASE_ANON_KEY) ? SUPABASE_ANON_KEY : ""); }
   function gGemini(){ return SET.gemini || (notPlaceholder(GEMINI_API_KEY) ? GEMINI_API_KEY : ""); }
+  function gEleven(){ return SET.eleven || ELEVEN_API_KEY || ""; }
 
   function initSupa(){
     var url=gSupaUrl(), key=gSupaKey();
@@ -251,21 +255,25 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   }
 
   var SHOWS = [
-    { id:"custom", name:"Custom or none",
-      tone:"Write in a clear, warm, natural spoken style." },
-    { id:"sbu", name:"Struggling Brothers United",
-      tone:"Faith based brotherhood. Raw, honest, and grace centered, aware of Scripture but never preachy. Testimony driven, the kind of real talk that breaks silence and builds brotherhood." },
-    { id:"nsp", name:"Neuro Static Pulse",
-      tone:"Reflective and thoughtful, exploring the mind, meaning, and the signal underneath the noise. Curious and a little edgy, but grounded." },
-    { id:"awl", name:"Accessibility Without Limits",
-      tone:"Inclusion first. Frame everything through a disability and accessibility lens, practical and empowering, and note that the segment ships with captions and a transcript." },
-    { id:"goofy", name:"The Goofy Business",
-      tone:"Comedy and chaos, curated. Two co hosts riffing back and forth, chasing tangents, with at least one callback to the rubber chicken mascot." },
-    { id:"grace", name:"Men of Grace",
-      tone:"Grace centered and honest about falling short. Grounded in Scripture, gentle, real, and never preachy." }
+    { id:"custom", name:"Custom or none", tone:"Write in a clear, warm, natural spoken style." },
+    { id:"sbu", name:"Struggling Brothers United", tone:"Faith based brotherhood. Raw, honest, and grace centered, aware of Scripture but never preachy. Testimony driven, the kind of real talk that breaks silence and builds brotherhood." },
+    { id:"nsp", name:"Neuro Static Pulse", tone:"Reflective and thoughtful, exploring the mind, meaning, and the signal underneath the noise. Curious and a little edgy, but grounded." },
+    { id:"awl", name:"Accessibility Without Limits", tone:"Inclusion first. Frame everything through a disability and accessibility lens, practical and empowering, and note that the segment ships with captions and a transcript." },
+    { id:"goofy", name:"The Goofy Business", tone:"Comedy and chaos, curated. Two co hosts riffing back and forth, chasing tangents, with at least one callback to the rubber chicken mascot." },
+    { id:"grace", name:"Men of Grace", tone:"Grace centered and honest about falling short. Grounded in Scripture, gentle, real, and never preachy." }
   ];
 
   var VOICES = ["Warm, honest, welcoming, and encouraging","Warm baritone","Bright and energetic","Calm mentor","Gravelly and seasoned","Soft spoken","Youthful and quick","Custom"];
+
+  var ELEVEN_PRESETS = [
+    { id:"bIHbv24MWmeRgasZH58o", name:"Will (Relaxed Optimist)" },
+    { id:"pNInz6obpgDQGcFmaJgB", name:"Adam (Dominant & Narrative)" },
+    { id:"JBFqnCBsd6RMkjVDRZzb", name:"George (Warm & Engaging)" },
+    { id:"IKne3meq5aSn9XLyUdCD", name:"Charlie (Australian Conversational)" },
+    { id:"nPczCjzI2devNBz1zQrb", name:"Brian (Deep Baritone)" },
+    { id:"EXAVITQu4vr4xnSDxMaL", name:"Bella (Warm & Expressive)" },
+    { id:"custom", name:"Custom Voice ID (Paste below)" }
+  ];
 
   var KOKORO_VOICES = [
     { id:"am_adam", name:"Kokoro: Adam (Warm Male)" },
@@ -282,8 +290,20 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   var history = [];
 
   function defaultHost(i){
+    var defaultEleven = (i === 0) ? "bIHbv24MWmeRgasZH58o" : "pNInz6obpgDQGcFmaJgB";
     var defaultKokoro = (i % 2 === 0) ? "am_adam" : "am_michael";
-    return { name:"Host "+(i+1), persona:"", voice:VOICES[0], kokoroVoice:defaultKokoro, previewVoice:"", rate:1, pitch:1 };
+    return {
+      name: "Host " + (i + 1),
+      persona: "",
+      voice: VOICES[0],
+      engine: "eleven",
+      elevenVoice: defaultEleven,
+      customElevenId: "",
+      kokoroVoice: defaultKokoro,
+      previewVoice: "",
+      rate: 1,
+      pitch: 1
+    };
   }
 
   (function(){
@@ -322,18 +342,21 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     hosts.forEach(function(h,i){
       var wrap=document.createElement("div"); wrap.className="host";
       var title=document.createElement("h3"); title.textContent="Seat "+(i+1); wrap.appendChild(title);
+      
       var g=document.createElement("div"); g.className="grid2";
       g.appendChild(makeText("Name",h.name,function(v){ h.name=v; }));
-      g.appendChild(makeVoice(h));
+      g.appendChild(makeVoiceTag(h));
       wrap.appendChild(g);
-      wrap.appendChild(makeKokoroPicker(h));
-      wrap.appendChild(makePreviewVoice(h));
+
+      wrap.appendChild(makeEngineSelector(h));
       wrap.appendChild(makeVoiceControls(h));
+
       var pl=document.createElement("label"); pl.className="field"; pl.textContent="Persona and background"; wrap.appendChild(pl);
       var ta=document.createElement("textarea"); ta.rows=3;
-      ta.placeholder="Who is this host? Their story, their angle, how they talk.";
+      ta.placeholder="Who is this host? Their story, angle, and how they relate to the listener.";
       ta.value=h.persona; ta.addEventListener("input", function(){ h.persona=ta.value; });
       wrap.appendChild(ta);
+
       list.appendChild(wrap);
     });
   }
@@ -346,13 +369,13 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     box.appendChild(l); box.appendChild(inp); return box;
   }
 
-  function makeVoice(h){
+  function makeVoiceTag(h){
     var box=document.createElement("div");
-    var l=document.createElement("label"); l.className="field"; l.textContent="Voice tag";
+    var l=document.createElement("label"); l.className="field"; l.textContent="Tone style tag";
     var sel=document.createElement("select");
     VOICES.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; sel.appendChild(op); });
     var custom=document.createElement("input"); custom.type="text";
-    custom.placeholder="Name your own voice, like Robert's OMI clone";
+    custom.placeholder="Custom voice label (e.g. Robert OMI clone)";
     custom.style.marginTop="10px";
     var known = VOICES.indexOf(h.voice) !== -1 && h.voice !== "Custom";
     if(known){ sel.value=h.voice; custom.style.display="none"; }
@@ -366,40 +389,78 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     return box;
   }
 
-  function makeKokoroPicker(h){
-    var box=document.createElement("div");
-    var l=document.createElement("label"); l.className="field"; l.textContent="Kokoro AI Voice (High quality)";
-    var sel=document.createElement("select");
-    KOKORO_VOICES.forEach(function(v){
-      var op=document.createElement("option"); op.value=v.id; op.textContent=v.name; sel.appendChild(op);
+  function makeEngineSelector(h){
+    var wrap=document.createElement("div"); wrap.style.marginTop="14px";
+    var l=document.createElement("label"); l.className="field"; l.textContent="Audio Engine & Voice Model"; wrap.appendChild(l);
+    
+    var g=document.createElement("div"); g.className="grid2";
+
+    var engBox=document.createElement("div");
+    var engSel=document.createElement("select");
+    var op1=document.createElement("option"); op1.value="eleven"; op1.textContent="ElevenLabs (Studio Quality)"; engSel.appendChild(op1);
+    var op2=document.createElement("option"); op2.value="kokoro"; op2.textContent="Kokoro AI (Free Browser Engine)"; engSel.appendChild(op2);
+    engSel.value = h.engine || "eleven";
+    engBox.appendChild(engSel);
+    g.appendChild(engBox);
+
+    var voiceConfigBox=document.createElement("div");
+
+    var elevenSelect=document.createElement("select");
+    ELEVEN_PRESETS.forEach(function(p){
+      var op=document.createElement("option"); op.value=p.id; op.textContent=p.name; elevenSelect.appendChild(op);
     });
-    sel.value = h.kokoroVoice || "am_adam";
-    sel.addEventListener("change", function(){ h.kokoroVoice = sel.value; });
-    box.appendChild(l); box.appendChild(sel); return box;
-  }
+    elevenSelect.value = h.elevenVoice || "bIHbv24MWmeRgasZH58o";
 
-  var SYS_VOICES = [];
-  function loadVoices(){
-    if(!('speechSynthesis' in window)) return;
-    SYS_VOICES = window.speechSynthesis.getVoices() || [];
-    if(SYS_VOICES.length){ renderHosts(); }
-  }
+    var customIdInput=document.createElement("input"); customIdInput.type="text";
+    customIdInput.placeholder="Paste ElevenLabs Voice ID here";
+    customIdInput.style.marginTop="8px";
+    customIdInput.value = h.customElevenId || "";
 
-  function makePreviewVoice(h){
-    var box=document.createElement("div");
-    var l=document.createElement("label"); l.className="field"; l.textContent="Browser voice fallback";
-    var sel=document.createElement("select");
-    if(!SYS_VOICES.length){
-      var o=document.createElement("option"); o.textContent="Loading your device voices..."; sel.appendChild(o);
-    } else {
-      SYS_VOICES.forEach(function(v){
-        var op=document.createElement("option"); op.value=v.name; op.textContent=v.name+" ("+v.lang+")"; sel.appendChild(op);
-      });
-      if(h.previewVoice && SYS_VOICES.some(function(v){return v.name===h.previewVoice;})){ sel.value=h.previewVoice; }
-      else { h.previewVoice = sel.value; }
+    var kokoroSelect=document.createElement("select");
+    KOKORO_VOICES.forEach(function(kv){
+      var op=document.createElement("option"); op.value=kv.id; op.textContent=kv.name; kokoroSelect.appendChild(op);
+    });
+    kokoroSelect.value = h.kokoroVoice || "am_adam";
+
+    function refreshEngineUi(){
+      if(engSel.value === "eleven"){
+        elevenSelect.style.display="block";
+        kokoroSelect.style.display="none";
+        customIdInput.style.display = (elevenSelect.value === "custom") ? "block" : "none";
+      } else {
+        elevenSelect.style.display="none";
+        customIdInput.style.display="none";
+        kokoroSelect.style.display="block";
+      }
     }
-    sel.addEventListener("change", function(){ h.previewVoice=sel.value; });
-    box.appendChild(l); box.appendChild(sel); return box;
+
+    engSel.addEventListener("change", function(){
+      h.engine = engSel.value;
+      refreshEngineUi();
+    });
+
+    elevenSelect.addEventListener("change", function(){
+      h.elevenVoice = elevenSelect.value;
+      customIdInput.style.display = (elevenSelect.value === "custom") ? "block" : "none";
+    });
+
+    customIdInput.addEventListener("input", function(){
+      h.customElevenId = customIdInput.value.trim();
+    });
+
+    kokoroSelect.addEventListener("change", function(){
+      h.kokoroVoice = kokoroSelect.value;
+    });
+
+    refreshEngineUi();
+
+    voiceConfigBox.appendChild(elevenSelect);
+    voiceConfigBox.appendChild(customIdInput);
+    voiceConfigBox.appendChild(kokoroSelect);
+    g.appendChild(voiceConfigBox);
+
+    wrap.appendChild(g);
+    return wrap;
   }
 
   function slider(labelText, min, max, step, val, isSpeed, onChange){
@@ -421,26 +482,89 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
 
   function makeVoiceControls(h){
     var box=document.createElement("div"); box.style.marginTop="12px";
-    var hear=document.createElement("button"); hear.type="button"; hear.textContent="Hear sample";
+    var hear=document.createElement("button"); hear.type="button"; hear.textContent="Hear sample voice";
     hear.style.cssText="min-height:44px; padding:0 20px; border-radius:10px; border:2px solid var(--blue); background:var(--black); color:var(--blue); font-weight:700; font-family:'Raleway',sans-serif; cursor:pointer;";
-    hear.addEventListener("click", function(){ sampleKokoroVoice(h); });
+    hear.addEventListener("click", function(){ sampleHostVoice(h); });
     box.appendChild(hear);
-    box.appendChild(slider("Speed", 0.6, 1.4, 0.05, h.rate||1, true, function(v){ h.rate=v; }));
-    box.appendChild(slider("Pitch (deeper to lighter)", 0.5, 1.5, 0.05, h.pitch||1, false, function(v){ h.pitch=v; }));
+    box.appendChild(slider("Speed", 0.7, 1.3, 0.05, h.rate||1, true, function(v){ h.rate=v; }));
     return box;
+  }
+
+  function updateStatus(msg){
+    var box = $("#ttsStatus");
+    if(!msg){ box.style.display="none"; box.textContent=""; }
+    else{ box.style.display="block"; box.textContent=msg; }
+  }
+
+  function showErr(msg){ $("#errBox").innerHTML='<div class="err">'+msg+'</div>'; }
+  function clearErr(){ $("#errBox").innerHTML=""; }
+
+  function getEffectiveElevenVoiceId(h){
+    if(h.elevenVoice === "custom" && h.customElevenId){ return h.customElevenId; }
+    return h.elevenVoice || "bIHbv24MWmeRgasZH58o";
+  }
+
+  async function sampleHostVoice(h){
+    clearErr();
+    if(h.engine === "eleven"){
+      var key = gEleven();
+      if(!key){
+        showErr("To test ElevenLabs voices, open Keys and Setup at the top and paste your ElevenLabs API Key.");
+        return;
+      }
+      var voiceId = getEffectiveElevenVoiceId(h);
+      updateStatus("Generating ElevenLabs sample audio...");
+      try{
+        var res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + voiceId, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "xi-api-key": key
+          },
+          body: JSON.stringify({
+            text: "Hey brother, this is how I sound at the table for your show.",
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+          })
+        });
+        if(!res.ok){
+          var errTxt = await res.text();
+          throw new Error("ElevenLabs API error: " + res.status + " " + errTxt);
+        }
+        var blob = await res.blob();
+        playAudioBlob(blob);
+        updateStatus("");
+      }catch(e){
+        updateStatus("");
+        showErr(e.message);
+      }
+    } else {
+      var tts = await ensureKokoro();
+      if(!tts) return;
+      updateStatus("Generating Kokoro sample...");
+      try{
+        var raw = await tts.generate("Hey brother, this is how I sound at the table for your show.", {
+          voice: h.kokoroVoice || "am_adam",
+          speed: h.rate || 1
+        });
+        playRawAudio(raw);
+        updateStatus("");
+      }catch(e){
+        updateStatus("");
+        showErr("Sample error: " + e.message);
+      }
+    }
   }
 
   async function ensureKokoro(){
     if(kokoroTTS) return kokoroTTS;
     if(kokoroLoading) return null;
     kokoroLoading = true;
-    updateStatus("Downloading Kokoro voice model into your browser cache (first run only, ~90MB)...");
+    updateStatus("Downloading Kokoro free neural engine into cache (first time only, ~90MB)...");
     try{
-      kokoroTTS = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-ONNX", {
-        dtype: "q8"
-      });
-      updateStatus("Kokoro AI voice engine ready.");
-      setTimeout(function(){ updateStatus(""); }, 2500);
+      kokoroTTS = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-ONNX", { dtype: "q8" });
+      updateStatus("Kokoro voice engine ready.");
+      setTimeout(function(){ updateStatus(""); }, 2000);
       kokoroLoading = false;
       return kokoroTTS;
     }catch(e){
@@ -450,30 +574,11 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     }
   }
 
-  function updateStatus(msg){
-    var box = $("#ttsStatus");
-    if(!msg){ box.style.display="none"; box.textContent=""; }
-    else{ box.style.display="block"; box.textContent=msg; }
-  }
-
-  async function sampleKokoroVoice(h){
-    var tts = await ensureKokoro();
-    if(!tts){
-      sampleVoice(h);
-      return;
-    }
-    updateStatus("Generating Kokoro sample...");
-    try{
-      var raw = await tts.generate("Hey brother, this is how I sound in your episode.", {
-        voice: h.kokoroVoice || "am_adam",
-        speed: h.rate || 1
-      });
-      playRawAudio(raw);
-      updateStatus("");
-    }catch(e){
-      updateStatus("");
-      showErr("Sample error: " + e.message);
-    }
+  function playAudioBlob(blob){
+    stopSpeak();
+    var url = URL.createObjectURL(blob);
+    activeAudioElement = new Audio(url);
+    activeAudioElement.play();
   }
 
   function playRawAudio(rawAudio){
@@ -487,16 +592,6 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     currentSource.start();
   }
 
-  function sampleVoice(h){
-    if(!('speechSynthesis' in window)){ return; }
-    window.speechSynthesis.cancel();
-    var u=new SpeechSynthesisUtterance("Hey, this is how I will sound on the episode.");
-    var v=SYS_VOICES.filter(function(vv){ return vv.name===h.previewVoice; })[0];
-    if(v){ u.voice=v; }
-    u.rate=h.rate||1; u.pitch=h.pitch||1;
-    window.speechSynthesis.speak(u);
-  }
-
   $("#scaleSel").addEventListener("change", function(e){
     document.documentElement.style.setProperty("--scale", e.target.value);
   });
@@ -505,14 +600,14 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   function renderSaveArea(){
     var area=$("#saveArea");
     if(!sb){
-      area.innerHTML = '<div class="notice">Saving turns on as soon as your Supabase settings are active.</div>';
+      area.innerHTML = '<div class="notice">Saving turns on as soon as your Supabase settings are active in Keys and Setup.</div>';
       $("#lineupList").innerHTML="";
       return;
     }
     area.innerHTML =
       '<div class="saverow">'+
         '<div><label class="field" for="lineupName">Name this lineup</label>'+
-        '<input type="text" id="lineupName" placeholder="Example, SBU Core Three"></div>'+
+        '<input type="text" id="lineupName" placeholder="Example, SBU Will and Adam Brotherhood"></div>'+
         '<button id="saveBtn">Save lineup</button>'+
       '</div><div id="saveMsg"></div>';
     $("#saveBtn").addEventListener("click", saveLineup);
@@ -546,7 +641,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
         var showName = (SHOWS.filter(function(s){return s.id===row.show;})[0]||{}).name || "Custom";
         var el=document.createElement("div"); el.className="lineup";
         el.innerHTML='<span class="nm">'+escapeHtml(row.name)+'</span>'+
-          '<span class="meta">'+row.count+' at the table, '+escapeHtml(showName)+'</span>';
+          '<span class="meta">'+row.count+' at table, '+escapeHtml(showName)+'</span>';
         var load=document.createElement("button"); load.className="load"; load.textContent="Load";
         load.addEventListener("click", function(){ applyLineup(row); });
         var del=document.createElement("button"); del.className="del"; del.textContent="Delete";
@@ -563,13 +658,15 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     $("#showSel").value = row.show || "sbu";
     hosts = (row.hosts||[]).map(function(h, idx){
       return {
-        name:h.name||"",
-        persona:h.persona||"",
-        voice:h.voice||VOICES[0],
-        kokoroVoice:h.kokoroVoice||((idx%2===0)?"am_adam":"am_michael"),
-        previewVoice:h.previewVoice||"",
-        rate:h.rate||1,
-        pitch:h.pitch||1
+        name: h.name || ("Host " + (idx+1)),
+        persona: h.persona || "",
+        voice: h.voice || VOICES[0],
+        engine: h.engine || "eleven",
+        elevenVoice: h.elevenVoice || ((idx === 0) ? "bIHbv24MWmeRgasZH58o" : "pNInz6obpgDQGcFmaJgB"),
+        customElevenId: h.customElevenId || "",
+        kokoroVoice: h.kokoroVoice || ((idx%2===0)?"am_adam":"am_michael"),
+        rate: h.rate || 1,
+        pitch: h.pitch || 1
       };
     });
     hostCount = row.count || hosts.length || 1;
@@ -614,7 +711,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     lines.push("Hosts at the table:");
     hosts.forEach(function(h,i){
       var name=(h.name||("Host "+(i+1))).trim();
-      lines.push((i+1)+". "+name+". Voice: "+h.voice+". Persona: "+(h.persona.trim()||"no notes, use your judgment based on the show tone."));
+      lines.push((i+1)+". "+name+". Voice: "+h.voice+". Persona: "+(h.persona.trim()||"no notes, use judgment based on show tone."));
     });
     lines.push("");
     lines.push("Source material to build the episode from:");
@@ -622,8 +719,8 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     lines.push("");
     lines.push(hosts.length===1
       ? "Write this as a solo host speaking directly to the listener."
-      : "Write this as a real conversation, the hosts building on each other, trading the thread back and forth naturally.");
-    lines.push("Write the opening of the episode now. Do not summarize what you are about to do, just start the script.");
+      : "Write this as a real brotherhood conversation, hosts building on each other and trading the thread naturally.");
+    lines.push("Write the opening of the episode now. Start the script directly.");
     return lines.join("\n");
   }
 
@@ -631,13 +728,11 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     $("#genBtn").disabled=b; if($("#moreBtn")) $("#moreBtn").disabled=b;
     $("#genBtn").textContent = b ? "Writing..." : "Write the episode";
   }
-  function showErr(msg){ $("#errBox").innerHTML='<div class="err">'+msg+'</div>'; }
-  function clearErr(){ $("#errBox").innerHTML=""; }
 
   async function callWriter(messages){
     var key = gGemini();
     if(!key){
-      throw new Error("The writer needs your free Google Gemini key. Open Keys and Setup at the top, paste it in, and press Save keys.");
+      throw new Error("The writer needs your Google Gemini key. Open Keys and Setup at the top, paste it in, and press Save keys.");
     }
     var contents = messages.map(function(m){
       return { role:(m.role==="assistant" ? "model" : "user"), parts:[{ text:m.content }] };
@@ -658,7 +753,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
         lastErr = "the model returned nothing";
       }catch(e){ lastErr = e.message; }
     }
-    throw new Error("The writer could not reach Google ("+lastErr+"). Check that your Gemini key is pasted correctly and is active.");
+    throw new Error("The writer could not reach Google ("+lastErr+"). Verify your Gemini key is active.");
   }
 
   function renderScript(){
@@ -683,7 +778,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   async function generate(fresh){
     clearErr();
     if(fresh){ history=[]; history.push({ role:"user", content:buildBrief() }); }
-    else { history.push({ role:"user", content:"Continue the episode naturally from where it stopped. Keep the same hosts, personas, and flow. Do not repeat earlier lines. Keep each block 150 to 250 words and never use any dash or hyphen." }); }
+    else { history.push({ role:"user", content:"Continue the episode naturally from where it stopped. Keep the same hosts, personas, and warmth. Do not repeat earlier lines. Keep each block 150 to 250 words and never use any dash or hyphen." }); }
     setBusy(true);
     try{
       var reply = await callWriter(history);
@@ -705,7 +800,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     });
   });
 
-  /* ============ KOKORO & SYSTEM AUDIO ENGINE ============ */
+  /* ============ FULL EPISODE PLAYBACK (ELEVENLABS & KOKORO) ============ */
   var speaking=false;
 
   function getFullScript(){
@@ -718,10 +813,10 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     hosts.forEach(function(h, idx){
       var nm = (h.name||("Host "+(idx+1))).trim();
       hostMap[nm] = {
+        engine: h.engine || "eleven",
+        elevenVoiceId: getEffectiveElevenVoiceId(h),
         kokoroVoice: h.kokoroVoice || "am_adam",
-        previewVoice: h.previewVoice || "",
-        rate: h.rate || 1,
-        pitch: h.pitch || 1
+        rate: h.rate || 1
       };
     });
 
@@ -740,23 +835,76 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
         }
       }
       if(trimmed){
-        var info = hostMap[currentSpeaker] || { kokoroVoice:"am_adam", previewVoice:"", rate:1, pitch:1 };
+        var info = hostMap[currentSpeaker] || { engine:"eleven", elevenVoiceId:"bIHbv24MWmeRgasZH58o", kokoroVoice:"am_adam", rate:1 };
         segs.push({
           speaker: currentSpeaker,
           text: trimmed,
+          engine: info.engine,
+          elevenVoiceId: info.elevenVoiceId,
           kokoroVoice: info.kokoroVoice,
-          previewVoice: info.previewVoice,
-          rate: info.rate,
-          pitch: info.pitch
+          rate: info.rate
         });
       }
     });
     return segs;
   }
 
-  async function speakWithKokoro(){
+  async function speakElevenLabs(){
+    clearErr();
+    var key = gEleven();
+    if(!key){
+      showErr("To play with ElevenLabs, open Keys and Setup at the top and paste your ElevenLabs API Key.");
+      return;
+    }
     var segs = buildSegments();
-    if(!segs.length){ showErr("Write an episode first, then press Play aloud."); return; }
+    if(!segs.length){ showErr("Write an episode first, then press Play."); return; }
+    stopSpeak();
+    speaking = true;
+
+    for(var i=0; i<segs.length; i++){
+      if(!speaking) break;
+      var s = segs[i];
+      updateStatus("Generating ElevenLabs audio for " + s.speaker + " (" + (i+1) + " of " + segs.length + ")...");
+      try{
+        var res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + s.elevenVoiceId, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "xi-api-key": key },
+          body: JSON.stringify({
+            text: s.text,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+          })
+        });
+        if(!res.ok){
+          var errText = await res.text();
+          throw new Error("ElevenLabs error: " + res.status + " " + errText);
+        }
+        var blob = await res.blob();
+        if(!speaking) break;
+        await playBlobPromise(blob);
+      }catch(e){
+        showErr(e.message);
+        break;
+      }
+    }
+    speaking = false;
+    updateStatus("");
+  }
+
+  function playBlobPromise(blob){
+    return new Promise(function(resolve){
+      var url = URL.createObjectURL(blob);
+      activeAudioElement = new Audio(url);
+      activeAudioElement.onended = function(){ resolve(); };
+      activeAudioElement.onerror = function(){ resolve(); };
+      activeAudioElement.play();
+    });
+  }
+
+  async function speakKokoro(){
+    clearErr();
+    var segs = buildSegments();
+    if(!segs.length){ showErr("Write an episode first, then press Play."); return; }
     stopSpeak();
     var tts = await ensureKokoro();
     if(!tts) return;
@@ -767,7 +915,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     for(var i=0; i<segs.length; i++){
       if(!speaking) break;
       var s = segs[i];
-      updateStatus("Generating speech for " + s.speaker + " (" + (i+1) + " of " + segs.length + ")...");
+      updateStatus("Generating Kokoro speech for " + s.speaker + " (" + (i+1) + " of " + segs.length + ")...");
       try{
         var raw = await tts.generate(s.text, {
           voice: s.kokoroVoice,
@@ -776,7 +924,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
         if(!speaking) break;
         await playSegmentPromise(raw);
       }catch(e){
-        showErr("Kokoro playback issue on segment: " + e.message);
+        showErr("Kokoro playback issue: " + e.message);
       }
     }
     speaking = false;
@@ -795,57 +943,39 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     });
   }
 
-  function speakScriptDevice(){
-    if(!('speechSynthesis' in window)){ showErr("This device does not offer built in browser voices."); return; }
-    var segs = buildSegments();
-    if(!segs.length){ showErr("Write an episode first, then press Play."); return; }
-    stopSpeak();
-    speaking = true;
-    var idx = 0;
-    (function next(){
-      if(!speaking || idx >= segs.length){ speaking=false; return; }
-      var seg = segs[idx++];
-      var u = new SpeechSynthesisUtterance(seg.text);
-      var v = SYS_VOICES.filter(function(vv){ return vv.name === seg.previewVoice; })[0];
-      if(v){ u.voice = v; }
-      u.rate = seg.rate || 1;
-      u.pitch = seg.pitch || 1;
-      u.onend = next;
-      u.onerror = next;
-      window.speechSynthesis.speak(u);
-    })();
-  }
-
   function stopSpeak(){
     speaking = false;
+    if(activeAudioElement){
+      try{ activeAudioElement.pause(); activeAudioElement.currentTime = 0; }catch(e){}
+      activeAudioElement = null;
+    }
     if(currentSource){
       try{ currentSource.stop(); }catch(e){}
       currentSource = null;
     }
-    if('speechSynthesis' in window){
-      window.speechSynthesis.cancel();
-    }
     updateStatus("");
   }
 
-  $("#playBtn").addEventListener("click", speakWithKokoro);
-  $("#playDeviceBtn").addEventListener("click", speakScriptDevice);
+  $("#playElevenBtn").addEventListener("click", speakElevenLabs);
+  $("#playKokoroBtn").addEventListener("click", speakKokoro);
   $("#stopBtn").addEventListener("click", stopSpeak);
 
   /* ============ KEYS AND SETUP ============ */
-  function setupField(labelText, val, k){
+  function setupField(labelText, val, k, isSecret){
     var box=document.createElement("div");
     var l=document.createElement("label"); l.className="field"; l.textContent=labelText;
-    var inp=document.createElement("input"); inp.type="text"; inp.value=val||"";
+    var inp=document.createElement("input"); inp.type = isSecret ? "password" : "text"; inp.value=val||"";
     inp.setAttribute("data-k",k); inp.setAttribute("autocomplete","off"); inp.setAttribute("spellcheck","false");
     box.appendChild(l); box.appendChild(inp); return box;
   }
 
   function renderSetup(){
     var box=$("#setupFields"); box.innerHTML="";
-    box.appendChild(setupField("Supabase project URL", gSupaUrl(), "supaUrl"));
-    box.appendChild(setupField("Supabase anon public key", gSupaKey(), "supaKey"));
-    box.appendChild(setupField("Google Gemini key (free)", gGemini(), "gemini"));
+    box.appendChild(setupField("Supabase project URL", gSupaUrl(), "supaUrl", false));
+    box.appendChild(setupField("Supabase anon public key", gSupaKey(), "supaKey", true));
+    box.appendChild(setupField("Google Gemini key (free)", gGemini(), "gemini", true));
+    box.appendChild(setupField("ElevenLabs API key (optional)", gEleven(), "eleven", true));
+    
     var b=document.createElement("button");
     b.textContent="Save keys";
     b.style.cssText="min-height:48px; padding:0 24px; margin-top:16px; border:none; border-radius:10px; font-weight:700; font-family:'Raleway',sans-serif; font-size:1rem; background:var(--blue); color:var(--black); cursor:pointer;";
@@ -853,10 +983,11 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
       SET.supaUrl = (box.querySelector('[data-k="supaUrl"]').value||"").trim();
       SET.supaKey = (box.querySelector('[data-k="supaKey"]').value||"").trim();
       SET.gemini  = (box.querySelector('[data-k="gemini"]').value||"").trim();
+      SET.eleven  = (box.querySelector('[data-k="eleven"]').value||"").trim();
       saveSettings(SET);
       initSupa();
       renderSaveArea(); loadLineups();
-      $("#setupMsg").innerHTML='<div class="ok">Saved. Your keys stay in this browser.</div>';
+      $("#setupMsg").innerHTML='<div class="ok">Saved. Your keys stay secure in this browser.</div>';
     });
     box.appendChild(b);
   }
@@ -868,10 +999,6 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   initSupa();
   renderSaveArea();
   loadLineups();
-  if('speechSynthesis' in window){
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-  }
 })();
 </script>
 </body>
