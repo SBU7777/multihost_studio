@@ -11,16 +11,41 @@
 <style>
   :root{
     --black:#0A0F14; --navy:#1A2330; --steel:#2D3A4A;
+    --card-bg:#0d141c; --input-bg:#0A0F14;
     --blue:#00B2FF; --orange:#FF6B00; --gold:#FFC107; --gray:#D9D9D9;
+    --title-color:#ffffff; --sub-color:#9fb0c0;
     --scale:1;
   }
+
+  body[data-theme="high-contrast"] {
+    --black:#000000; --navy:#0a0a0a; --steel:#444444;
+    --card-bg:#121212; --input-bg:#000000;
+    --blue:#00E5FF; --orange:#FF9100; --gold:#FFD600; --gray:#FFFFFF;
+    --title-color:#FFFFFF; --sub-color:#CCCCCC;
+  }
+
+  body[data-theme="warm-slate"] {
+    --black:#14171A; --navy:#222831; --steel:#393E46;
+    --card-bg:#1E222A; --input-bg:#14171A;
+    --blue:#00ADB5; --orange:#F38181; --gold:#F9ED69; --gray:#ECEFF1;
+    --title-color:#FFFFFF; --sub-color:#A0AAB2;
+  }
+
+  body[data-theme="light"] {
+    --black:#F4F6F9; --navy:#FFFFFF; --steel:#D1D9E0;
+    --card-bg:#F8FAFC; --input-bg:#FFFFFF;
+    --blue:#0066CC; --orange:#D95300; --gold:#B28900; --gray:#24292F;
+    --title-color:#0A0F14; --sub-color:#57606A;
+  }
+
   *{ box-sizing:border-box; }
   html{ font-size:calc(18px * var(--scale)); }
   body{
     margin:0; background:var(--black); color:var(--gray);
     font-family:'Raleway',system-ui,Arial,sans-serif; line-height:1.6;
+    transition: background .2s ease, color .2s ease;
   }
-  h1,h2,h3,.brand{ font-family:'Bebas Neue',Impact,sans-serif; letter-spacing:1px; color:#fff; }
+  h1,h2,h3,.brand{ font-family:'Bebas Neue',Impact,sans-serif; letter-spacing:1px; color:var(--title-color); }
   a{ color:var(--blue); }
 
   header{
@@ -32,17 +57,18 @@
   .brand{ font-size:2rem; color:var(--gold); margin:0; }
   .brand span{ color:var(--blue); }
   .grow{ flex:1 1 auto; }
-  .textsize{ display:flex; align-items:center; gap:8px; }
-  .textsize label{ font-weight:600; font-size:0.85rem; color:var(--gray); }
+  .controls-group{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+  .ctrl-item{ display:flex; align-items:center; gap:8px; }
+  .ctrl-item label{ font-weight:700; font-size:0.85rem; color:var(--sub-color); }
 
   main{ max-width:1080px; margin:0 auto; padding:22px 18px 80px; display:grid; gap:26px; }
   .panel{ background:var(--navy); border:1px solid var(--steel); border-radius:14px; padding:22px; }
   .panel h2{ font-size:1.7rem; color:var(--blue); margin:0 0 4px; }
-  .sub{ color:#9fb0c0; font-size:0.9rem; margin:0 0 18px; }
+  .sub{ color:var(--sub-color); font-size:0.9rem; margin:0 0 18px; }
 
-  label.field{ display:block; font-weight:700; margin:16px 0 6px; color:#fff; font-size:0.95rem; }
+  label.field{ display:block; font-weight:700; margin:16px 0 6px; color:var(--title-color); font-size:0.95rem; }
   select, textarea, input[type=text], input[type=password]{
-    width:100%; background:var(--black); color:var(--gray);
+    width:100%; background:var(--input-bg); color:var(--gray);
     border:2px solid var(--steel); border-radius:10px;
     padding:12px 14px; font-family:inherit; font-size:1rem; min-height:48px;
   }
@@ -55,14 +81,14 @@
   .seatbtn{
     flex:1 1 60px; min-height:52px; font-size:1.3rem;
     font-family:'Bebas Neue',sans-serif; letter-spacing:1px;
-    background:var(--black); color:var(--gray);
+    background:var(--input-bg); color:var(--gray);
     border:2px solid var(--steel); border-radius:10px; cursor:pointer;
   }
-  .seatbtn.active{ background:var(--blue); color:var(--black); border-color:var(--blue); }
+  .seatbtn.active{ background:var(--blue); color:#000000; border-color:var(--blue); }
 
   .host{
     border:1px solid var(--steel); border-left:5px solid var(--orange);
-    border-radius:12px; padding:16px; margin-top:16px; background:#0d141c;
+    border-radius:12px; padding:16px; margin-top:16px; background:var(--card-bg);
   }
   .host h3{ margin:0 0 6px; font-size:1.35rem; color:var(--orange); }
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -72,7 +98,7 @@
   button.action{
     width:100%; margin-top:22px; min-height:56px;
     font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:1px;
-    background:var(--orange); color:var(--black); border:none; border-radius:12px; cursor:pointer;
+    background:var(--orange); color:#000000; border:none; border-radius:12px; cursor:pointer;
   }
   button.action:disabled{ opacity:0.5; cursor:wait; }
 
@@ -80,36 +106,36 @@
   .saverow > div{ flex:1 1 220px; }
   .saverow button{ flex:0 0 auto; min-height:48px; padding:0 22px; border-radius:10px;
     font-weight:700; font-family:'Raleway',sans-serif; font-size:1rem; cursor:pointer;
-    background:var(--blue); color:var(--black); border:none; }
+    background:var(--blue); color:#000000; border:none; }
 
   .lineup{ display:flex; flex-wrap:wrap; align-items:center; gap:10px;
-    border:1px solid var(--steel); border-radius:10px; padding:12px 14px; margin-top:12px; background:#0d141c; }
-  .lineup .nm{ flex:1 1 auto; font-weight:700; color:#fff; }
-  .lineup .meta{ color:#9fb0c0; font-size:0.85rem; }
+    border:1px solid var(--steel); border-radius:10px; padding:12px 14px; margin-top:12px; background:var(--card-bg); }
+  .lineup .nm{ flex:1 1 auto; font-weight:700; color:var(--title-color); }
+  .lineup .meta{ color:var(--sub-color); font-size:0.85rem; }
   .lineup button{ min-height:42px; padding:0 16px; border-radius:8px; cursor:pointer;
-    font-weight:700; border:2px solid var(--steel); background:var(--black); color:var(--gray); }
+    font-weight:700; border:2px solid var(--steel); background:var(--input-bg); color:var(--gray); }
   .lineup button.load{ border-color:var(--blue); color:var(--blue); }
   .lineup button.del{ border-color:#7a2b2b; color:#ff8a80; }
 
-  .notice{ background:#14202b; border:1px solid var(--steel); border-radius:10px;
-    padding:14px; color:#9fb0c0; font-size:0.9rem; }
+  .notice{ background:var(--card-bg); border:1px solid var(--steel); border-radius:10px;
+    padding:14px; color:var(--sub-color); font-size:0.9rem; }
 
-  .hint{ font-size:0.85rem; color:#9fb0c0; margin-top:8px; }
+  .hint{ font-size:0.85rem; color:var(--sub-color); margin-top:8px; }
 
   .script{ white-space:pre-wrap; word-wrap:break-word; font-size:1.02rem; }
   .script .who{ display:block; margin-top:18px; font-family:'Bebas Neue',sans-serif;
     font-size:1.25rem; letter-spacing:1px; color:var(--gold); }
-  .empty{ color:#7d8ea0; font-style:italic; padding:20px 0; }
+  .empty{ color:var(--sub-color); font-style:italic; padding:20px 0; }
   .err{ color:#ff8a80; background:#2a1414; border:1px solid #5a2020;
     border-radius:10px; padding:14px; margin-top:16px; }
   .ok{ color:#8affc0; font-size:0.9rem; margin-top:10px; }
   .toolbar{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
   .toolbar button{ flex:1 1 160px; min-height:50px; font-size:1rem; border-radius:10px;
     font-family:'Raleway',sans-serif; font-weight:700; cursor:pointer; border:2px solid var(--steel);
-    background:var(--black); color:var(--gray); }
-  .toolbar button.primary{ background:var(--blue); color:var(--black); border-color:var(--blue); }
-  .toolbar button.gold{ background:var(--gold); color:var(--black); border-color:var(--gold); }
-  .status-box{ padding:10px 14px; border-radius:8px; background:#14202b; border:1px solid var(--steel); margin-bottom:12px; color:var(--gold); font-size:0.95rem; }
+    background:var(--input-bg); color:var(--gray); }
+  .toolbar button.primary{ background:var(--blue); color:#000000; border-color:var(--blue); }
+  .toolbar button.gold{ background:var(--gold); color:#000000; border-color:var(--gold); }
+  .status-box{ padding:10px 14px; border-radius:8px; background:var(--card-bg); border:1px solid var(--steel); margin-bottom:12px; color:var(--gold); font-size:0.95rem; }
 
   @media (max-width:720px){
     .grid2, .options{ grid-template-columns:1fr; }
@@ -125,14 +151,25 @@
 <header>
   <h1 class="brand">Multi Host <span>Studio</span></h1>
   <div class="grow"></div>
-  <div class="textsize">
-    <label for="scaleSel">Text size</label>
-    <select id="scaleSel" style="min-height:44px; width:auto;">
-      <option value="1">Normal</option>
-      <option value="1.15">Large</option>
-      <option value="1.3">Larger</option>
-      <option value="1.5">Largest</option>
-    </select>
+  <div class="controls-group">
+    <div class="ctrl-item">
+      <label for="themeSel">Theme</label>
+      <select id="themeSel" style="min-height:44px; width:auto; padding:6px 10px;">
+        <option value="default">Midnight</option>
+        <option value="high-contrast">High Contrast</option>
+        <option value="warm-slate">Warm Slate</option>
+        <option value="light">Studio Light</option>
+      </select>
+    </div>
+    <div class="ctrl-item">
+      <label for="scaleSel">Text Size</label>
+      <select id="scaleSel" style="min-height:44px; width:auto; padding:6px 10px;">
+        <option value="1">Normal</option>
+        <option value="1.15">Large</option>
+        <option value="1.3">Larger</option>
+        <option value="1.5">Largest</option>
+      </select>
+    </div>
   </div>
 </header>
 
@@ -246,6 +283,36 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   function gSupaKey(){ return SET.supaKey || (notPlaceholder(SUPABASE_ANON_KEY) ? SUPABASE_ANON_KEY : ""); }
   function gGemini(){ return SET.gemini || (notPlaceholder(GEMINI_API_KEY) ? GEMINI_API_KEY : ""); }
   function gEleven(){ return SET.eleven || ELEVEN_API_KEY || ""; }
+
+  // Font Scale and Theme Persistence
+  var currentScale = SET.scale || "1";
+  var currentTheme = SET.theme || "default";
+
+  document.documentElement.style.setProperty("--scale", currentScale);
+  $("#scaleSel").value = currentScale;
+
+  if(currentTheme !== "default"){
+    document.body.setAttribute("data-theme", currentTheme);
+  }
+  $("#themeSel").value = currentTheme;
+
+  $("#scaleSel").addEventListener("change", function(e){
+    var v = e.target.value;
+    document.documentElement.style.setProperty("--scale", v);
+    SET.scale = v;
+    saveSettings(SET);
+  });
+
+  $("#themeSel").addEventListener("change", function(e){
+    var th = e.target.value;
+    if(th === "default"){
+      document.body.removeAttribute("data-theme");
+    } else {
+      document.body.setAttribute("data-theme", th);
+    }
+    SET.theme = th;
+    saveSettings(SET);
+  });
 
   function initSupa(){
     var url=gSupaUrl(), key=gSupaKey();
@@ -499,7 +566,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   function makeVoiceControls(h){
     var box=document.createElement("div"); box.style.marginTop="12px";
     var hear=document.createElement("button"); hear.type="button"; hear.textContent="Hear sample voice";
-    hear.style.cssText="min-height:44px; padding:0 20px; border-radius:10px; border:2px solid var(--blue); background:var(--black); color:var(--blue); font-weight:700; font-family:'Raleway',sans-serif; cursor:pointer;";
+    hear.style.cssText="min-height:44px; padding:0 20px; border-radius:10px; border:2px solid var(--blue); background:var(--input-bg); color:var(--blue); font-weight:700; font-family:'Raleway',sans-serif; cursor:pointer;";
     hear.addEventListener("click", function(){ sampleHostVoice(h); });
     box.appendChild(hear);
     box.appendChild(slider("Speed", 0.7, 1.3, 0.05, h.rate||1, true, function(v){ h.rate=v; }));
@@ -604,10 +671,6 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     currentSource.connect(audioContext.destination);
     currentSource.start();
   }
-
-  $("#scaleSel").addEventListener("change", function(e){
-    document.documentElement.style.setProperty("--scale", e.target.value);
-  });
 
   /* ============ SAVED LINEUPS (Supabase) ============ */
   function renderSaveArea(){
@@ -993,7 +1056,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     
     var b=document.createElement("button");
     b.textContent="Save keys";
-    b.style.cssText="min-height:48px; padding:0 24px; margin-top:16px; border:none; border-radius:10px; font-weight:700; font-family:'Raleway',sans-serif; font-size:1rem; background:var(--blue); color:var(--black); cursor:pointer;";
+    b.style.cssText="min-height:48px; padding:0 24px; margin-top:16px; border:none; border-radius:10px; font-weight:700; font-family:'Raleway',sans-serif; font-size:1rem; background:var(--blue); color:#000000; cursor:pointer;";
     b.addEventListener("click", function(){
       SET.supaUrl = (box.querySelector('[data-k="supaUrl"]').value||"").trim();
       SET.supaKey = (box.querySelector('[data-k="supaKey"]').value||"").trim();
