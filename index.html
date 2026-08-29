@@ -1,278 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi Host Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Raleway:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  :root{
-    --black:#0A0F14; --navy:#1A2330; --steel:#2D3A4A;
-    --card-bg:#0d141c; --input-bg:#0A0F14;
-    --blue:#00B2FF; --orange:#FF6B00; --gold:#FFC107; --gray:#D9D9D9;
-    --title-color:#ffffff; --sub-color:#9fb0c0;
-    --scale:1;
-  }
-
-  body[data-theme="high-contrast"] {
-    --black:#000000; --navy:#0a0a0a; --steel:#444444;
-    --card-bg:#121212; --input-bg:#000000;
-    --blue:#00E5FF; --orange:#FF9100; --gold:#FFD600; --gray:#FFFFFF;
-    --title-color:#FFFFFF; --sub-color:#CCCCCC;
-  }
-
-  body[data-theme="warm-slate"] {
-    --black:#14171A; --navy:#222831; --steel:#393E46;
-    --card-bg:#1E222A; --input-bg:#14171A;
-    --blue:#00ADB5; --orange:#F38181; --gold:#F9ED69; --gray:#ECEFF1;
-    --title-color:#FFFFFF; --sub-color:#A0AAB2;
-  }
-
-  body[data-theme="light"] {
-    --black:#F4F6F9; --navy:#FFFFFF; --steel:#D1D9E0;
-    --card-bg:#F8FAFC; --input-bg:#FFFFFF;
-    --blue:#0066CC; --orange:#D95300; --gold:#B28900; --gray:#24292F;
-    --title-color:#0A0F14; --sub-color:#57606A;
-  }
-
-  *{ box-sizing:border-box; }
-  html{ font-size:calc(18px * var(--scale)); }
-  body{
-    margin:0; background:var(--black); color:var(--gray);
-    font-family:'Raleway',system-ui,Arial,sans-serif; line-height:1.6;
-    transition: background .2s ease, color .2s ease;
-  }
-  h1,h2,h3,.brand{ font-family:'Bebas Neue',Impact,sans-serif; letter-spacing:1px; color:var(--title-color); }
-  a{ color:var(--blue); }
-
-  header{
-    position:sticky; top:0; z-index:5; background:var(--navy);
-    border-bottom:3px solid var(--steel);
-    display:flex; flex-wrap:wrap; align-items:center; gap:14px;
-    padding:14px 18px;
-  }
-  .brand{ font-size:2rem; color:var(--gold); margin:0; }
-  .brand span{ color:var(--blue); }
-  .grow{ flex:1 1 auto; }
-  .controls-group{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
-  .ctrl-item{ display:flex; align-items:center; gap:8px; }
-  .ctrl-item label{ font-weight:700; font-size:0.85rem; color:var(--sub-color); }
-
-  main{ max-width:1080px; margin:0 auto; padding:22px 18px 80px; display:grid; gap:26px; }
-  .panel{ background:var(--navy); border:1px solid var(--steel); border-radius:14px; padding:22px; }
-  .panel h2{ font-size:1.7rem; color:var(--blue); margin:0 0 4px; }
-  .sub{ color:var(--sub-color); font-size:0.9rem; margin:0 0 18px; }
-
-  label.field{ display:block; font-weight:700; margin:16px 0 6px; color:var(--title-color); font-size:0.95rem; }
-  select, textarea, input[type=text], input[type=password]{
-    width:100%; background:var(--input-bg); color:var(--gray);
-    border:2px solid var(--steel); border-radius:10px;
-    padding:12px 14px; font-family:inherit; font-size:1rem; min-height:48px;
-  }
-  textarea{ resize:vertical; line-height:1.5; }
-  select:focus, textarea:focus, input:focus, button:focus{
-    outline:3px solid var(--blue); outline-offset:2px;
-  }
-
-  .seatrow{ display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
-  .seatbtn{
-    flex:1 1 60px; min-height:52px; font-size:1.3rem;
-    font-family:'Bebas Neue',sans-serif; letter-spacing:1px;
-    background:var(--input-bg); color:var(--gray);
-    border:2px solid var(--steel); border-radius:10px; cursor:pointer;
-  }
-  .seatbtn.active{ background:var(--blue); color:#000000; border-color:var(--blue); }
-
-  .host{
-    border:1px solid var(--steel); border-left:5px solid var(--orange);
-    border-radius:12px; padding:16px; margin-top:16px; background:var(--card-bg);
-  }
-  .host h3{ margin:0 0 6px; font-size:1.35rem; color:var(--orange); }
-  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-
-  .options{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-
-  button.action{
-    width:100%; margin-top:22px; min-height:56px;
-    font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:1px;
-    background:var(--orange); color:#000000; border:none; border-radius:12px; cursor:pointer;
-  }
-  button.action:disabled{ opacity:0.5; cursor:wait; }
-
-  .saverow{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
-  .saverow > div{ flex:1 1 220px; }
-  .saverow button{ flex:0 0 auto; min-height:48px; padding:0 22px; border-radius:10px;
-    font-weight:700; font-family:'Raleway',sans-serif; font-size:1rem; cursor:pointer;
-    background:var(--blue); color:#000000; border:none; }
-
-  .lineup{ display:flex; flex-wrap:wrap; align-items:center; gap:10px;
-    border:1px solid var(--steel); border-radius:10px; padding:12px 14px; margin-top:12px; background:var(--card-bg); }
-  .lineup .nm{ flex:1 1 auto; font-weight:700; color:var(--title-color); }
-  .lineup .meta{ color:var(--sub-color); font-size:0.85rem; }
-  .lineup button{ min-height:42px; padding:0 16px; border-radius:8px; cursor:pointer;
-    font-weight:700; border:2px solid var(--steel); background:var(--input-bg); color:var(--gray); }
-  .lineup button.load{ border-color:var(--blue); color:var(--blue); }
-  .lineup button.del{ border-color:#7a2b2b; color:#ff8a80; }
-
-  .notice{ background:var(--card-bg); border:1px solid var(--steel); border-radius:10px;
-    padding:14px; color:var(--sub-color); font-size:0.9rem; }
-
-  .hint{ font-size:0.85rem; color:var(--sub-color); margin-top:8px; }
-
-  .script{ white-space:pre-wrap; word-wrap:break-word; font-size:1.02rem; }
-  .script .who{ display:block; margin-top:18px; font-family:'Bebas Neue',sans-serif;
-    font-size:1.25rem; letter-spacing:1px; color:var(--gold); }
-  .empty{ color:var(--sub-color); font-style:italic; padding:20px 0; }
-  .err{ color:#ff8a80; background:#2a1414; border:1px solid #5a2020;
-    border-radius:10px; padding:14px; margin-top:16px; }
-  .ok{ color:#8affc0; font-size:0.9rem; margin-top:10px; }
-  .toolbar{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
-  .toolbar button{ flex:1 1 160px; min-height:50px; font-size:1rem; border-radius:10px;
-    font-family:'Raleway',sans-serif; font-weight:700; cursor:pointer; border:2px solid var(--steel);
-    background:var(--input-bg); color:var(--gray); }
-  .toolbar button.primary{ background:var(--blue); color:#000000; border-color:var(--blue); }
-  .toolbar button.gold{ background:var(--gold); color:#000000; border-color:var(--gold); }
-  .status-box{ padding:10px 14px; border-radius:8px; background:var(--card-bg); border:1px solid var(--steel); margin-bottom:12px; color:var(--gold); font-size:0.95rem; }
-
-  @media (max-width:720px){
-    .grid2, .options{ grid-template-columns:1fr; }
-    .brand{ font-size:1.6rem; }
-  }
-  @media (prefers-reduced-motion:no-preference){
-    .seatbtn, .action{ transition:background .15s ease, color .15s ease; }
-  }
-</style>
-</head>
-<body>
-
-<header>
-  <h1 class="brand">Multi Host <span>Studio</span></h1>
-  <div class="grow"></div>
-  <div class="controls-group">
-    <div class="ctrl-item">
-      <label for="themeSel">Theme</label>
-      <select id="themeSel" style="min-height:44px; width:auto; padding:6px 10px;">
-        <option value="default">Midnight</option>
-        <option value="high-contrast">High Contrast</option>
-        <option value="warm-slate">Warm Slate</option>
-        <option value="light">Studio Light</option>
-      </select>
-    </div>
-    <div class="ctrl-item">
-      <label for="scaleSel">Text Size</label>
-      <select id="scaleSel" style="min-height:44px; width:auto; padding:6px 10px;">
-        <option value="1">Normal</option>
-        <option value="1.15">Large</option>
-        <option value="1.3">Larger</option>
-        <option value="1.5">Largest</option>
-      </select>
-    </div>
-  </div>
-</header>
-
-<main>
-
-  <section class="panel">
-    <details id="setupBox">
-      <summary style="cursor:pointer; font-family:'Bebas Neue',sans-serif; font-size:1.6rem; color:var(--blue); letter-spacing:1px;">Keys and Setup</summary>
-      <p class="sub" style="margin-top:12px;">Paste your keys once. They stay in this browser only. Supabase remembers your lineups, Gemini writes episodes, and Kokoro runs realistic voices for free.</p>
-      <div id="setupFields"></div>
-      <div id="setupMsg"></div>
-    </details>
-  </section>
-
-  <section class="panel">
-    <h2>The Table</h2>
-    <p class="sub">Pick a show, seat one to four hosts, and configure their voices and personas.</p>
-
-    <label class="field" for="showSel">Show</label>
-    <select id="showSel"></select>
-
-    <label class="field">How many hosts?</label>
-    <div class="seatrow" id="seatRow"></div>
-
-    <div id="hostList"></div>
-  </section>
-
-  <section class="panel">
-    <h2>Saved Lineups</h2>
-    <p class="sub">Name your table and save it to your cloud. It comes right back next time.</p>
-
-    <div id="saveArea"></div>
-    <div id="lineupList"></div>
-  </section>
-
-  <section class="panel">
-    <h2>Source</h2>
-    <p class="sub">Drop in a topic, your notes, an outline, or a whole article. This is what the hosts will talk about.</p>
-
-    <label class="field" for="sourceBox">Source material</label>
-    <textarea id="sourceBox" rows="7" placeholder="Paste your topic, notes, outline, or article here."></textarea>
-
-    <div class="options" style="margin-top:8px;">
-      <div>
-        <label class="field" for="formatSel">Format</label>
-        <select id="formatSel">
-          <option>Natural conversation</option>
-          <option>Interview</option>
-          <option>Teaching</option>
-          <option>Raw testimony</option>
-          <option>Panel</option>
-          <option>Question and answer</option>
-        </select>
-      </div>
-      <div>
-        <label class="field" for="lengthSel">Length</label>
-        <select id="lengthSel">
-          <option>Short (a tight opener)</option>
-          <option selected>Standard (a full episode)</option>
-          <option>Deep dive (build across sections)</option>
-        </select>
-      </div>
-    </div>
-
-    <button class="action" id="genBtn">Write the episode</button>
-    <p class="hint">Each spoken block comes out at roughly 150 to 250 words so it chunks cleanly for OMI. Longer episodes build in sections, so use Write the next section to keep going.</p>
-  </section>
-
-  <section class="panel">
-    <h2>The Script & Voices</h2>
-    <div id="ttsStatus" class="status-box" style="display:none;"></div>
-    <div class="toolbar" id="toolbar" style="display:none;">
-      <button class="primary" id="playKokoroBtn">Play (Kokoro Free AI)</button>
-      <button class="gold" id="playElevenBtn">Play (ElevenLabs API)</button>
-      <button id="stopBtn">Stop</button>
-      <button id="copyBtn">Copy script</button>
-      <button id="moreBtn">Write next section</button>
-      <button id="clearBtn">Clear</button>
-    </div>
-    <div id="output"><p class="empty">Your generated conversation will show up here.</p></div>
-    <div id="errBox"></div>
-  </section>
-
-</main>
-
 <script type="module">
 import { KokoroTTS } from "https://cdn.jsdelivr.net/npm/kokoro-js@1.1.0/dist/kokoro.web.js";
 
-var SUPABASE_URL      = "PASTE_YOUR_PROJECT_URL_HERE";
+var SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
 var SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
-var GEMINI_API_KEY    = "PASTE_YOUR_GEMINI_KEY_HERE";
-var ELEVEN_API_KEY    = "";
+var GEMINI_API_KEY = "PASTE_YOUR_GEMINI_KEY_HERE";
+var ELEVEN_API_KEY = "";
 var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
 
 (function(){
   var $ = function(s){ return document.querySelector(s); };
-
-  var sb = null;
-  var kokoroTTS = null;
-  var kokoroLoading = false;
-  var audioContext = null;
-  var currentSource = null;
-  var activeAudioElement = null;
+  var sb = null, kokoroTTS = null, kokoroLoading = false, audioContext = null, currentSource = null, activeAudioElement = null;
 
   function loadSettings(){ try{ return JSON.parse(localStorage.getItem("mhs_settings")||"{}"); }catch(e){ return {}; } }
   function saveSettings(o){ try{ localStorage.setItem("mhs_settings", JSON.stringify(o)); }catch(e){} }
@@ -284,35 +21,78 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   function gGemini(){ return SET.gemini || (notPlaceholder(GEMINI_API_KEY) ? GEMINI_API_KEY : ""); }
   function gEleven(){ return SET.eleven || ELEVEN_API_KEY || ""; }
 
-  // Font Scale and Theme Persistence
+  var customColors = SET.customColors || { bg:"#0A0F14", panel:"#1A2330", blue:"#00B2FF", gold:"#FFC107", text:"#D9D9D9" };
   var currentScale = SET.scale || "1";
   var currentTheme = SET.theme || "default";
 
   document.documentElement.style.setProperty("--scale", currentScale);
   $("#scaleSel").value = currentScale;
-
-  if(currentTheme !== "default"){
-    document.body.setAttribute("data-theme", currentTheme);
-  }
   $("#themeSel").value = currentTheme;
+  $("#cpBg").value = customColors.bg;
+  $("#cpPanel").value = customColors.panel;
+  $("#cpBlue").value = customColors.blue;
+  $("#cpGold").value = customColors.gold;
+  $("#cpText").value = customColors.text;
 
-  $("#scaleSel").addEventListener("change", function(e){
-    var v = e.target.value;
-    document.documentElement.style.setProperty("--scale", v);
-    SET.scale = v;
-    saveSettings(SET);
-  });
+  function applyCustomColors(){
+    var root = document.documentElement;
+    root.style.setProperty("--black", customColors.bg);
+    root.style.setProperty("--input-bg", customColors.bg);
+    root.style.setProperty("--navy", customColors.panel);
+    root.style.setProperty("--card-bg", customColors.panel);
+    root.style.setProperty("--blue", customColors.blue);
+    root.style.setProperty("--gold", customColors.gold);
+    root.style.setProperty("--gray", customColors.text);
+    root.style.setProperty("--title-color", "#FFFFFF");
+    root.style.setProperty("--sub-color", customColors.text);
+  }
 
-  $("#themeSel").addEventListener("change", function(e){
-    var th = e.target.value;
-    if(th === "default"){
+  function clearCustomColors(){
+    var root = document.documentElement;
+    ["--black","--input-bg","--navy","--card-bg","--blue","--gold","--gray","--title-color","--sub-color"].forEach(function(p){ root.style.removeProperty(p); });
+  }
+
+  function applyAppearance(){
+    var scale = $("#scaleSel").value;
+    var theme = $("#themeSel").value;
+    document.documentElement.style.setProperty("--scale", scale);
+    if(theme === "custom"){
       document.body.removeAttribute("data-theme");
+      $("#customThemeBox").style.display = "block";
+      applyCustomColors();
     } else {
-      document.body.setAttribute("data-theme", th);
+      $("#customThemeBox").style.display = "none";
+      clearCustomColors();
+      if(theme === "default"){ document.body.removeAttribute("data-theme"); }
+      else { document.body.setAttribute("data-theme", theme); }
     }
-    SET.theme = th;
+    SET.scale = scale; SET.theme = theme; SET.customColors = customColors;
     saveSettings(SET);
+  }
+
+  function onCustomColorInput(){
+    customColors.bg = $("#cpBg").value; customColors.panel = $("#cpPanel").value;
+    customColors.blue = $("#cpBlue").value; customColors.gold = $("#cpGold").value;
+    customColors.text = $("#cpText").value;
+    applyCustomColors(); SET.customColors = customColors; saveSettings(SET);
+  }
+
+  $("#cpBg").addEventListener("input", onCustomColorInput);
+  $("#cpPanel").addEventListener("input", onCustomColorInput);
+  $("#cpBlue").addEventListener("input", onCustomColorInput);
+  $("#cpGold").addEventListener("input", onCustomColorInput);
+  $("#cpText").addEventListener("input", onCustomColorInput);
+  $("#scaleSel").addEventListener("change", applyAppearance);
+  $("#themeSel").addEventListener("change", applyAppearance);
+
+  $("#saveAppBtn").addEventListener("click", function(){
+    applyAppearance();
+    var btn = $("#saveAppBtn"); var orig = btn.textContent;
+    btn.textContent = "Saved"; btn.style.color = "var(--gold)";
+    setTimeout(function(){ btn.textContent = orig; btn.style.color = "var(--blue)"; }, 1500);
   });
+
+  applyAppearance();
 
   function initSupa(){
     var url=gSupaUrl(), key=gSupaKey();
@@ -330,16 +110,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     { id:"grace", name:"Men of Grace", tone:"Grace centered and honest about falling short. Grounded in Scripture, gentle, real, and never preachy." }
   ];
 
-  var VOICES = [
-    "Warm, honest, welcoming, and encouraging",
-    "Warm baritone",
-    "Bright and energetic",
-    "Calm mentor",
-    "Gravelly and seasoned",
-    "Soft spoken",
-    "Youthful and quick",
-    "Custom"
-  ];
+  var VOICES = ["Warm, honest, welcoming, and encouraging","Warm baritone","Bright and energetic","Calm mentor","Gravelly and seasoned","Soft spoken","Youthful and quick","Custom"];
 
   var KOKORO_VOICES = [
     { id:"am_adam", name:"Adam (Warm & Honest Male - US)" },
@@ -370,30 +141,16 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     { id:"custom", name:"Custom Voice ID (Paste below)" }
   ];
 
-  var hostCount = 2;
-  var hosts = [];
-  var history = [];
+  var hostCount = 2, hosts = [], history = [];
 
   function defaultHost(i){
     var defaultKokoro = (i === 0) ? "am_adam" : (i === 1 ? "am_michael" : (i === 2 ? "am_eric" : "am_onyx"));
-    return {
-      name: "Host " + (i + 1),
-      persona: "",
-      voice: VOICES[0],
-      engine: "kokoro",
-      kokoroVoice: defaultKokoro,
-      elevenVoice: "bIHbv24MWmeRgasZH58o",
-      customElevenId: "",
-      rate: 1,
-      pitch: 1
-    };
+    return { name:"Host "+(i+1), persona:"", voice:VOICES[0], engine:"kokoro", kokoroVoice:defaultKokoro, elevenVoice:"bIHbv24MWmeRgasZH58o", customElevenId:"", rate:1, pitch:1 };
   }
 
   (function(){
     var sel = $("#showSel");
-    SHOWS.forEach(function(s){
-      var o=document.createElement("option"); o.value=s.id; o.textContent=s.name; sel.appendChild(o);
-    });
+    SHOWS.forEach(function(s){ var o=document.createElement("option"); o.value=s.id; o.textContent=s.name; sel.appendChild(o); });
     sel.value = "sbu";
   })();
 
@@ -401,9 +158,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     var row = $("#seatRow");
     for(var n=1;n<=4;n++){
       (function(n){
-        var b=document.createElement("button");
-        b.className="seatbtn"+(n===hostCount?" active":""); b.type="button"; b.textContent=n;
-        b.setAttribute("aria-label", n+(n===1?" host":" hosts"));
+        var b=document.createElement("button"); b.className="seatbtn"+(n===hostCount?" active":""); b.type="button"; b.textContent=n;
         b.addEventListener("click", function(){ setSeats(n); });
         row.appendChild(b);
       })(n);
@@ -412,9 +167,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
 
   function setSeats(n){
     hostCount=n;
-    document.querySelectorAll(".seatbtn").forEach(function(b){
-      b.classList.toggle("active", parseInt(b.textContent,10)===n);
-    });
+    document.querySelectorAll(".seatbtn").forEach(function(b){ b.classList.toggle("active", parseInt(b.textContent,10)===n); });
     while(hosts.length<n){ hosts.push(defaultHost(hosts.length)); }
     hosts = hosts.slice(0,n);
     renderHosts();
@@ -425,46 +178,35 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     hosts.forEach(function(h,i){
       var wrap=document.createElement("div"); wrap.className="host";
       var title=document.createElement("h3"); title.textContent="Seat "+(i+1); wrap.appendChild(title);
-      
       var g=document.createElement("div"); g.className="grid2";
       g.appendChild(makeText("Name",h.name,function(v){ h.name=v; }));
-      g.appendChild(makeVoiceTag(h));
-      wrap.appendChild(g);
-
+      g.appendChild(makeVoiceTag(h)); wrap.appendChild(g);
       wrap.appendChild(makeEngineSelector(h));
       wrap.appendChild(makeVoiceControls(h));
-
       var pl=document.createElement("label"); pl.className="field"; pl.textContent="Persona and background"; wrap.appendChild(pl);
-      var ta=document.createElement("textarea"); ta.rows=3;
-      ta.placeholder="Who is this host? Their story, angle, and how they relate to the listener.";
-      ta.value=h.persona; ta.addEventListener("input", function(){ h.persona=ta.value; });
-      wrap.appendChild(ta);
-
+      var ta=document.createElement("textarea"); ta.rows=3; ta.placeholder="Who is this host? Their story and perspective.";
+      ta.value=h.persona; ta.addEventListener("input", function(){ h.persona=ta.value; }); wrap.appendChild(ta);
       list.appendChild(wrap);
     });
   }
 
   function makeText(labelText,val,onChange){
-    var box=document.createElement("div");
-    var l=document.createElement("label"); l.className="field"; l.textContent=labelText;
+    var box=document.createElement("div"); var l=document.createElement("label"); l.className="field"; l.textContent=labelText;
     var inp=document.createElement("input"); inp.type="text"; inp.value=val;
     inp.addEventListener("input", function(){ onChange(inp.value); });
     box.appendChild(l); box.appendChild(inp); return box;
   }
 
   function makeVoiceTag(h){
-    var box=document.createElement("div");
-    var l=document.createElement("label"); l.className="field"; l.textContent="Tone style tag";
+    var box=document.createElement("div"); var l=document.createElement("label"); l.className="field"; l.textContent="Tone style tag";
     var sel=document.createElement("select");
     VOICES.forEach(function(o){ var op=document.createElement("option"); op.value=o; op.textContent=o; sel.appendChild(op); });
-    var custom=document.createElement("input"); custom.type="text";
-    custom.placeholder="Custom voice label (e.g. Robert OMI clone)";
-    custom.style.marginTop="10px";
+    var custom=document.createElement("input"); custom.type="text"; custom.placeholder="Custom label"; custom.style.marginTop="10px";
     var known = VOICES.indexOf(h.voice) !== -1 && h.voice !== "Custom";
     if(known){ sel.value=h.voice; custom.style.display="none"; }
     else { sel.value="Custom"; custom.style.display="block"; custom.value=(h.voice==="Custom"?"":h.voice); }
     sel.addEventListener("change", function(){
-      if(sel.value==="Custom"){ custom.style.display="block"; h.voice=custom.value.trim()||"Custom"; custom.focus(); }
+      if(sel.value==="Custom"){ custom.style.display="block"; h.voice=custom.value.trim()||"Custom"; }
       else { custom.style.display="none"; h.voice=sel.value; }
     });
     custom.addEventListener("input", function(){ h.voice=custom.value.trim()||"Custom"; });
@@ -475,75 +217,35 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   function makeEngineSelector(h){
     var wrap=document.createElement("div"); wrap.style.marginTop="14px";
     var l=document.createElement("label"); l.className="field"; l.textContent="Audio Engine & Voice Model"; wrap.appendChild(l);
-    
     var g=document.createElement("div"); g.className="grid2";
-
-    var engBox=document.createElement("div");
-    var engSel=document.createElement("select");
+    var engBox=document.createElement("div"); var engSel=document.createElement("select");
     var op1=document.createElement("option"); op1.value="kokoro"; op1.textContent="Kokoro AI (Free Browser Engine)"; engSel.appendChild(op1);
     var op2=document.createElement("option"); op2.value="eleven"; op2.textContent="ElevenLabs (Studio Quality API)"; engSel.appendChild(op2);
-    engSel.value = h.engine || "kokoro";
-    engBox.appendChild(engSel);
-    g.appendChild(engBox);
+    engSel.value = h.engine || "kokoro"; engBox.appendChild(engSel); g.appendChild(engBox);
 
     var voiceConfigBox=document.createElement("div");
-
     var kokoroSelect=document.createElement("select");
-    KOKORO_VOICES.forEach(function(kv){
-      var op=document.createElement("option"); op.value=kv.id; op.textContent=kv.name; kokoroSelect.appendChild(op);
-    });
+    KOKORO_VOICES.forEach(function(kv){ var op=document.createElement("option"); op.value=kv.id; op.textContent=kv.name; kokoroSelect.appendChild(op); });
     kokoroSelect.value = h.kokoroVoice || "am_adam";
 
     var elevenSelect=document.createElement("select");
-    ELEVEN_PRESETS.forEach(function(p){
-      var op=document.createElement("option"); op.value=p.id; op.textContent=p.name; elevenSelect.appendChild(op);
-    });
+    ELEVEN_PRESETS.forEach(function(p){ var op=document.createElement("option"); op.value=p.id; op.textContent=p.name; elevenSelect.appendChild(op); });
     elevenSelect.value = h.elevenVoice || "bIHbv24MWmeRgasZH58o";
 
-    var customIdInput=document.createElement("input"); customIdInput.type="text";
-    customIdInput.placeholder="Paste ElevenLabs Voice ID here";
-    customIdInput.style.marginTop="8px";
+    var customIdInput=document.createElement("input"); customIdInput.type="text"; customIdInput.placeholder="Paste ElevenLabs Voice ID"; customIdInput.style.marginTop="8px";
     customIdInput.value = h.customElevenId || "";
 
     function refreshEngineUi(){
-      if(engSel.value === "kokoro"){
-        kokoroSelect.style.display="block";
-        elevenSelect.style.display="none";
-        customIdInput.style.display="none";
-      } else {
-        kokoroSelect.style.display="none";
-        elevenSelect.style.display="block";
-        customIdInput.style.display = (elevenSelect.value === "custom") ? "block" : "none";
-      }
+      if(engSel.value === "kokoro"){ kokoroSelect.style.display="block"; elevenSelect.style.display="none"; customIdInput.style.display="none"; }
+      else { kokoroSelect.style.display="none"; elevenSelect.style.display="block"; customIdInput.style.display = (elevenSelect.value === "custom") ? "block" : "none"; }
     }
-
-    engSel.addEventListener("change", function(){
-      h.engine = engSel.value;
-      refreshEngineUi();
-    });
-
-    kokoroSelect.addEventListener("change", function(){
-      h.kokoroVoice = kokoroSelect.value;
-    });
-
-    elevenSelect.addEventListener("change", function(){
-      h.elevenVoice = elevenSelect.value;
-      customIdInput.style.display = (elevenSelect.value === "custom") ? "block" : "none";
-    });
-
-    customIdInput.addEventListener("input", function(){
-      h.customElevenId = customIdInput.value.trim();
-    });
-
+    engSel.addEventListener("change", function(){ h.engine=engSel.value; refreshEngineUi(); });
+    kokoroSelect.addEventListener("change", function(){ h.kokoroVoice=kokoroSelect.value; });
+    elevenSelect.addEventListener("change", function(){ h.elevenVoice=elevenSelect.value; customIdInput.style.display=(elevenSelect.value==="custom")?"block":"none"; });
+    customIdInput.addEventListener("input", function(){ h.customElevenId=customIdInput.value.trim(); });
     refreshEngineUi();
-
-    voiceConfigBox.appendChild(kokoroSelect);
-    voiceConfigBox.appendChild(elevenSelect);
-    voiceConfigBox.appendChild(customIdInput);
-    g.appendChild(voiceConfigBox);
-
-    wrap.appendChild(g);
-    return wrap;
+    voiceConfigBox.appendChild(kokoroSelect); voiceConfigBox.appendChild(elevenSelect); voiceConfigBox.appendChild(customIdInput);
+    g.appendChild(voiceConfigBox); wrap.appendChild(g); return wrap;
   }
 
   function slider(labelText, min, max, step, val, isSpeed, onChange){
@@ -555,11 +257,7 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     top.appendChild(l); top.appendChild(valLab);
     var r=document.createElement("input"); r.type="range"; r.min=min; r.max=max; r.step=step; r.value=val;
     r.style.cssText="width:100%; min-height:40px; margin-top:6px;";
-    r.addEventListener("input", function(){
-      var v=parseFloat(r.value);
-      valLab.textContent = isSpeed ? (v.toFixed(2)+"x") : v.toFixed(2);
-      onChange(v);
-    });
+    r.addEventListener("input", function(){ var v=parseFloat(r.value); valLab.textContent = isSpeed ? (v.toFixed(2)+"x") : v.toFixed(2); onChange(v); });
     wrap.appendChild(top); wrap.appendChild(r); return wrap;
   }
 
@@ -573,66 +271,43 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     return box;
   }
 
-  function updateStatus(msg){
-    var box = $("#ttsStatus");
-    if(!msg){ box.style.display="none"; box.textContent=""; }
-    else{ box.style.display="block"; box.textContent=msg; }
-  }
-
+  function updateStatus(msg){ var box=$("#ttsStatus"); if(!msg){ box.style.display="none"; box.textContent=""; } else { box.style.display="block"; box.textContent=msg; } }
   function showErr(msg){ $("#errBox").innerHTML='<div class="err">'+msg+'</div>'; }
   function clearErr(){ $("#errBox").innerHTML=""; }
 
-  function getEffectiveElevenVoiceId(h){
-    if(h.elevenVoice === "custom" && h.customElevenId){ return h.customElevenId; }
-    return h.elevenVoice || "bIHbv24MWmeRgasZH58o";
+  function getEffectiveElevenVoiceId(h){ return (h.elevenVoice==="custom" && h.customElevenId) ? h.customElevenId : (h.elevenVoice||"bIHbv24MWmeRgasZH58o"); }
+
+  async function ensureAudioContext(){
+    if(!audioContext){
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioContext.state === "suspended"){
+      await audioContext.resume();
+    }
+    return audioContext;
   }
 
   async function sampleHostVoice(h){
     clearErr();
     if(h.engine === "eleven"){
-      var key = gEleven();
-      if(!key){
-        showErr("To test ElevenLabs voices, open Keys and Setup at the top and paste your ElevenLabs API Key.");
-        return;
-      }
-      var voiceId = getEffectiveElevenVoiceId(h);
-      updateStatus("Generating ElevenLabs sample audio...");
+      var key = gEleven(); if(!key){ showErr("To test ElevenLabs voices, enter your key in Keys and Setup."); return; }
+      var voiceId = getEffectiveElevenVoiceId(h); updateStatus("Generating ElevenLabs sample...");
       try{
-        var res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + voiceId, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "xi-api-key": key },
-          body: JSON.stringify({
-            text: "Hey brother, this is how I sound at the table for your show.",
-            model_id: "eleven_multilingual_v2",
-            voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-          })
+        var res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/"+voiceId, {
+          method:"POST", headers:{"Content-Type":"application/json","xi-api-key":key},
+          body:JSON.stringify({ text:"Hey brother, this is how I sound at the table for your show.", model_id:"eleven_multilingual_v2", voice_settings:{stability:0.5,similarity_boost:0.75} })
         });
-        if(!res.ok){
-          var errTxt = await res.text();
-          throw new Error("ElevenLabs API error: " + res.status + " " + errTxt);
-        }
-        var blob = await res.blob();
-        playAudioBlob(blob);
-        updateStatus("");
-      }catch(e){
-        updateStatus("");
-        showErr(e.message);
-      }
+        if(!res.ok){ throw new Error("ElevenLabs API error: "+res.status); }
+        var blob = await res.blob(); playAudioBlob(blob); updateStatus("");
+      }catch(e){ updateStatus(""); showErr(e.message); }
     } else {
-      var tts = await ensureKokoro();
-      if(!tts) return;
+      var tts = await ensureKokoro(); if(!tts) return;
       updateStatus("Generating Kokoro sample...");
       try{
-        var raw = await tts.generate("Hey brother, this is how I sound at the table for your show.", {
-          voice: h.kokoroVoice || "am_adam",
-          speed: h.rate || 1
-        });
-        playRawAudio(raw);
+        var raw = await tts.generate("Hey brother, this is how I sound at the table for your show.", { voice:h.kokoroVoice||"am_adam", speed:h.rate||1 });
+        await playRawAudio(raw);
         updateStatus("");
-      }catch(e){
-        updateStatus("");
-        showErr("Sample error: " + e.message);
-      }
+      }catch(e){ updateStatus(""); showErr("Sample error: "+e.message); }
     }
   }
 
@@ -642,127 +317,79 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     kokoroLoading = true;
     updateStatus("Downloading Kokoro free neural engine into cache (first time only, ~90MB)...");
     try{
-      kokoroTTS = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-ONNX", { dtype: "q8" });
-      updateStatus("Kokoro voice engine ready.");
-      setTimeout(function(){ updateStatus(""); }, 2000);
-      kokoroLoading = false;
-      return kokoroTTS;
-    }catch(e){
-      kokoroLoading = false;
-      showErr("Could not initialize Kokoro engine: " + e.message);
-      return null;
-    }
+      kokoroTTS = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", { dtype:"q8", device:"wasm" });
+      updateStatus("Kokoro voice engine ready."); setTimeout(function(){ updateStatus(""); }, 2000);
+      kokoroLoading = false; return kokoroTTS;
+    }catch(e){ kokoroLoading=false; showErr("Could not initialize Kokoro: "+e.message); return null; }
   }
 
-  function playAudioBlob(blob){
-    stopSpeak();
-    var url = URL.createObjectURL(blob);
-    activeAudioElement = new Audio(url);
-    activeAudioElement.play();
-  }
+  function playAudioBlob(blob){ stopSpeak(); var url=URL.createObjectURL(blob); activeAudioElement=new Audio(url); activeAudioElement.play(); }
 
-  function playRawAudio(rawAudio){
+  async function playRawAudio(rawAudio){
     stopSpeak();
-    if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    var buffer = audioContext.createBuffer(1, rawAudio.audio.length, rawAudio.sampling_rate);
+    var ctx = await ensureAudioContext();
+    var buffer = ctx.createBuffer(1, rawAudio.audio.length, rawAudio.sampling_rate);
     buffer.copyToChannel(rawAudio.audio, 0);
-    currentSource = audioContext.createBufferSource();
+    currentSource = ctx.createBufferSource();
     currentSource.buffer = buffer;
-    currentSource.connect(audioContext.destination);
+    currentSource.connect(ctx.destination);
     currentSource.start();
   }
 
   /* ============ SAVED LINEUPS (Supabase) ============ */
   function renderSaveArea(){
     var area=$("#saveArea");
-    if(!sb){
-      area.innerHTML = '<div class="notice">Saving turns on as soon as your Supabase settings are active in Keys and Setup.</div>';
-      $("#lineupList").innerHTML="";
-      return;
-    }
-    area.innerHTML =
-      '<div class="saverow">'+
-        '<div><label class="field" for="lineupName">Name this lineup</label>'+
-        '<input type="text" id="lineupName" placeholder="Example, SBU Adam and Michael Duo"></div>'+
-        '<button id="saveBtn">Save lineup</button>'+
-      '</div><div id="saveMsg"></div>';
+    if(!sb){ area.innerHTML='<div class="notice">Saving turns on as soon as your Supabase settings are active in Keys and Setup.</div>'; $("#lineupList").innerHTML=""; return; }
+    area.innerHTML='<div class="saverow"><div><label class="field" for="lineupName">Name this lineup</label><input type="text" id="lineupName" placeholder="Example, SBU Adam and Michael Duo"></div><button id="saveBtn">Save lineup</button></div><div id="saveMsg"></div>';
     $("#saveBtn").addEventListener("click", saveLineup);
   }
 
   async function saveLineup(){
-    var name = ($("#lineupName").value||"").trim();
-    if(!name){ $("#saveMsg").innerHTML='<div class="err">Give the lineup a name first.</div>'; return; }
-    var row = { name:name, show:$("#showSel").value, count:hostCount, hosts:hosts };
+    var name=($("#lineupName").value||"").trim(); if(!name){ $("#saveMsg").innerHTML='<div class="err">Give the lineup a name first.</div>'; return; }
+    var row={ name:name, show:$("#showSel").value, count:hostCount, hosts:hosts };
     try{
-      var r = await sb.from("host_lineups").insert(row);
-      if(r.error){ throw new Error(r.error.message); }
-      $("#lineupName").value="";
-      $("#saveMsg").innerHTML='<div class="ok">Saved.</div>';
-      loadLineups();
-    }catch(e){
-      $("#saveMsg").innerHTML='<div class="err">Could not save: '+e.message+'</div>';
-    }
+      var r=await sb.from("host_lineups").insert(row); if(r.error) throw new Error(r.error.message);
+      $("#lineupName").value=""; $("#saveMsg").innerHTML='<div class="ok">Saved.</div>'; loadLineups();
+    }catch(e){ $("#saveMsg").innerHTML='<div class="err">Could not save: '+e.message+'</div>'; }
   }
 
   async function loadLineups(){
     if(!sb) return;
     var list=$("#lineupList");
     try{
-      var r = await sb.from("host_lineups").select("*").order("created_at",{ascending:false});
-      if(r.error){ throw new Error(r.error.message); }
-      var rows = r.data||[];
+      var r=await sb.from("host_lineups").select("*").order("created_at",{ascending:false});
+      if(r.error) throw new Error(r.error.message);
+      var rows=r.data||[];
       if(!rows.length){ list.innerHTML='<div class="notice" style="margin-top:14px;">No saved lineups yet. Design a table above and save it.</div>'; return; }
       list.innerHTML="";
       rows.forEach(function(row){
-        var showName = (SHOWS.filter(function(s){return s.id===row.show;})[0]||{}).name || "Custom";
+        var showName=(SHOWS.filter(function(s){return s.id===row.show;})[0]||{}).name||"Custom";
         var el=document.createElement("div"); el.className="lineup";
-        el.innerHTML='<span class="nm">'+escapeHtml(row.name)+'</span>'+
-          '<span class="meta">'+row.count+' at table, '+escapeHtml(showName)+'</span>';
+        el.innerHTML='<span class="nm">'+escapeHtml(row.name)+'</span><span class="meta">'+row.count+' at table, '+escapeHtml(showName)+'</span>';
         var load=document.createElement("button"); load.className="load"; load.textContent="Load";
         load.addEventListener("click", function(){ applyLineup(row); });
         var del=document.createElement("button"); del.className="del"; del.textContent="Delete";
         del.addEventListener("click", function(){ deleteLineup(row.id); });
-        el.appendChild(load); el.appendChild(del);
-        list.appendChild(el);
+        el.appendChild(load); el.appendChild(del); list.appendChild(el);
       });
-    }catch(e){
-      list.innerHTML='<div class="err">Could not load your lineups: '+e.message+'</div>';
-    }
+    }catch(e){ list.innerHTML='<div class="err">Could not load your lineups: '+e.message+'</div>'; }
   }
 
   function applyLineup(row){
     $("#showSel").value = row.show || "sbu";
     hosts = (row.hosts||[]).map(function(h, idx){
       var defaultKokoro = (idx === 0) ? "am_adam" : (idx === 1 ? "am_michael" : (idx === 2 ? "am_eric" : "am_onyx"));
-      return {
-        name: h.name || ("Host " + (idx+1)),
-        persona: h.persona || "",
-        voice: h.voice || VOICES[0],
-        engine: h.engine || "kokoro",
-        kokoroVoice: h.kokoroVoice || defaultKokoro,
-        elevenVoice: h.elevenVoice || "bIHbv24MWmeRgasZH58o",
-        customElevenId: h.customElevenId || "",
-        rate: h.rate || 1,
-        pitch: h.pitch || 1
-      };
+      return { name:h.name||("Host "+(idx+1)), persona:h.persona||"", voice:h.voice||VOICES[0], engine:h.engine||"kokoro", kokoroVoice:h.kokoroVoice||defaultKokoro, elevenVoice:h.elevenVoice||"bIHbv24MWmeRgasZH58o", customElevenId:h.customElevenId||"", rate:h.rate||1, pitch:h.pitch||1 };
     });
     hostCount = row.count || hosts.length || 1;
-    document.querySelectorAll(".seatbtn").forEach(function(b){
-      b.classList.toggle("active", parseInt(b.textContent,10)===hostCount);
-    });
-    renderHosts();
-    window.scrollTo({ top:0, behavior:"smooth" });
+    document.querySelectorAll(".seatbtn").forEach(function(b){ b.classList.toggle("active", parseInt(b.textContent,10)===hostCount); });
+    renderHosts(); window.scrollTo({ top:0, behavior:"smooth" });
   }
 
   async function deleteLineup(id){
     if(!sb) return;
-    try{
-      var r = await sb.from("host_lineups").delete().eq("id", id);
-      if(r.error){ throw new Error(r.error.message); }
-      loadLineups();
-    }catch(e){
-      $("#lineupList").innerHTML='<div class="err">Could not delete: '+e.message+'</div>';
-    }
+    try{ var r=await sb.from("host_lineups").delete().eq("id", id); if(r.error) throw new Error(r.error.message); loadLineups(); }
+    catch(e){ $("#lineupList").innerHTML='<div class="err">Could not delete: '+e.message+'</div>'; }
   }
 
   function escapeHtml(s){ return (s||"").replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
@@ -775,78 +402,52 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     "Rule three. Label every spoken block with the exact host name followed by a colon. Use only the host names you are given. No narrator, no extra characters.",
     "Rule four. Keep each single spoken block between roughly 150 and 250 words so it chunks cleanly for voice production.",
     "Rule five. Stay fully in each host's persona and voice character. Do not add bracketed stage directions.",
-    "Rule six. Keep every voice warm, honest, welcoming, and encouraging. The listener should feel welcomed, seen, and lifted, and always told the truth with kindness. Let that warmth carry underneath every host's persona, so even a blunt or funny host still leaves the listener feeling built up rather than talked down to."
+    "Rule six. Keep every voice warm, honest, welcoming, and encouraging. The listener should feel welcomed, seen, and lifted, and always told the truth with kindness."
   ].join(" ");
 
   function buildBrief(){
-    var show = SHOWS.filter(function(s){ return s.id===$("#showSel").value; })[0];
+    var show=SHOWS.filter(function(s){ return s.id===$("#showSel").value; })[0];
     var lines=[];
-    lines.push("Show tone: "+show.tone);
-    lines.push("Format: "+$("#formatSel").value);
-    lines.push("Length: "+$("#lengthSel").value);
-    lines.push("");
-    lines.push("Hosts at the table:");
-    hosts.forEach(function(h,i){
-      var name=(h.name||("Host "+(i+1))).trim();
-      lines.push((i+1)+". "+name+". Voice: "+h.voice+". Persona: "+(h.persona.trim()||"no notes, use judgment based on show tone."));
-    });
-    lines.push("");
-    lines.push("Source material to build the episode from:");
-    lines.push($("#sourceBox").value.trim() || "(no source given, open on the show tone itself)");
-    lines.push("");
-    lines.push(hosts.length===1
-      ? "Write this as a solo host speaking directly to the listener."
-      : "Write this as a real brotherhood conversation, hosts building on each other and trading the thread naturally.");
-    lines.push("Write the opening of the episode now. Start the script directly.");
+    lines.push("Show tone: "+show.tone); lines.push("Format: "+$("#formatSel").value); lines.push("Length: "+$("#lengthSel").value);
+    lines.push(""); lines.push("Hosts at the table:");
+    hosts.forEach(function(h,i){ var name=(h.name||("Host "+(i+1))).trim(); lines.push((i+1)+". "+name+". Voice: "+h.voice+". Persona: "+(h.persona.trim()||"none")); });
+    lines.push(""); lines.push("Source material to build the episode from:");
+    lines.push($("#sourceBox").value.trim() || "(open on show tone)"); lines.push("");
+    lines.push(hosts.length===1 ? "Write this as a solo host." : "Write this as a real brotherhood conversation.");
+    lines.push("Write the opening now. Start the script directly.");
     return lines.join("\n");
   }
 
-  function setBusy(b){
-    $("#genBtn").disabled=b; if($("#moreBtn")) $("#moreBtn").disabled=b;
-    $("#genBtn").textContent = b ? "Writing..." : "Write the episode";
-  }
+  function setBusy(b){ $("#genBtn").disabled=b; if($("#moreBtn")) $("#moreBtn").disabled=b; $("#genBtn").textContent=b?"Writing...":"Write the episode"; }
 
   async function callWriter(messages){
-    var key = gGemini();
-    if(!key){
-      throw new Error("The writer needs your Google Gemini key. Open Keys and Setup at the top, paste it in, and press Save keys.");
-    }
-    var contents = messages.map(function(m){
-      return { role:(m.role==="assistant" ? "model" : "user"), parts:[{ text:m.content }] };
-    });
-    var body = { system_instruction:{ parts:[{ text:SYSTEM }] }, contents:contents };
-    var lastErr = "";
+    var key = gGemini(); if(!key) throw new Error("Please enter your Google Gemini key in Keys and Setup.");
+    var contents=messages.map(function(m){ return { role:(m.role==="assistant"?"model":"user"), parts:[{ text:m.content }] }; });
+    var body={ system_instruction:{ parts:[{ text:SYSTEM }] }, contents:contents };
+    var lastErr="";
     for(var i=0;i<MODELS.length;i++){
       try{
-        var res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+MODELS[i]+":generateContent?key="+encodeURIComponent(key), {
-          method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(body)
+        var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+MODELS[i]+":generateContent?key="+encodeURIComponent(key), {
+          method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
         });
         if(!res.ok){ lastErr="status "+res.status; continue; }
-        var data = await res.json();
-        var cand = (data.candidates||[])[0];
-        var text = cand && cand.content && cand.content.parts
-          ? cand.content.parts.map(function(p){ return p.text||""; }).join("").trim() : "";
-        if(text){ return text; }
-        lastErr = "the model returned nothing";
-      }catch(e){ lastErr = e.message; }
+        var data=await res.json(); var cand=(data.candidates||[])[0];
+        var text=cand && cand.content && cand.content.parts ? cand.content.parts.map(function(p){ return p.text||""; }).join("").trim() : "";
+        if(text) return text;
+      }catch(e){ lastErr=e.message; }
     }
-    throw new Error("The writer could not reach Google ("+lastErr+"). Verify your Gemini key is active.");
+    throw new Error("Could not reach writer: "+lastErr);
   }
 
   function renderScript(){
-    var out=$("#output");
-    var full = history.filter(function(m){return m.role==="assistant";}).map(function(m){return m.content;}).join("\n\n");
+    var out=$("#output"); var full=history.filter(function(m){return m.role==="assistant";}).map(function(m){return m.content;}).join("\n\n");
     if(!full){ out.innerHTML='<p class="empty">Your generated conversation will show up here.</p>'; return; }
-    var names = hosts.map(function(h){return (h.name||"").trim();}).filter(Boolean);
-    var esc = escapeHtml(full);
-    var lines = esc.split("\n"); var html="";
+    var names=hosts.map(function(h){return (h.name||"").trim();}).filter(Boolean);
+    var esc=escapeHtml(full); var lines=esc.split("\n"); var html="";
     lines.forEach(function(line){
       var matched=false;
-      for(var i=0;i<names.length;i++){
-        var nm=names[i];
-        if(nm && line.indexOf(nm+":")===0){ html+='<span class="who">'+nm+'</span>'+line.slice(nm.length+1); matched=true; break; }
-      }
-      if(!matched){ html+=line; }
+      for(var i=0;i<names.length;i++){ var nm=names[i]; if(nm && line.indexOf(nm+":")===0){ html+='<span class="who">'+nm+'</span>'+line.slice(nm.length+1); matched=true; break; } }
+      if(!matched) html+=line;
       html+="\n";
     });
     out.innerHTML='<div class="script">'+html+'</div>';
@@ -855,15 +456,10 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   async function generate(fresh){
     clearErr();
     if(fresh){ history=[]; history.push({ role:"user", content:buildBrief() }); }
-    else { history.push({ role:"user", content:"Continue the episode naturally from where it stopped. Keep the same hosts, personas, and warmth. Do not repeat earlier lines. Keep each block 150 to 250 words and never use any dash or hyphen." }); }
+    else { history.push({ role:"user", content:"Continue the episode naturally from where it stopped. Keep each block 150 to 250 words and never use any dash or hyphen." }); }
     setBusy(true);
-    try{
-      var reply = await callWriter(history);
-      history.push({ role:"assistant", content:reply });
-      $("#toolbar").style.display="flex";
-      renderScript();
-      $("#output").scrollIntoView({ behavior:"smooth", block:"start" });
-    }catch(e){ showErr(e.message); }
+    try{ var reply=await callWriter(history); history.push({ role:"assistant", content:reply }); $("#toolbar").style.display="flex"; renderScript(); $("#output").scrollIntoView({ behavior:"smooth", block:"start" }); }
+    catch(e){ showErr(e.message); }
     finally{ setBusy(false); }
   }
 
@@ -872,165 +468,77 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   $("#clearBtn").addEventListener("click", function(){ history=[]; $("#toolbar").style.display="none"; clearErr(); renderScript(); });
   $("#copyBtn").addEventListener("click", function(){
     var full=history.filter(function(m){return m.role==="assistant";}).map(function(m){return m.content;}).join("\n\n");
-    navigator.clipboard.writeText(full).then(function(){
-      var b=$("#copyBtn"); var t=b.textContent; b.textContent="Copied"; setTimeout(function(){ b.textContent=t; },1400);
-    });
+    navigator.clipboard.writeText(full).then(function(){ var b=$("#copyBtn"); var t=b.textContent; b.textContent="Copied"; setTimeout(function(){ b.textContent=t; },1400); });
   });
 
-  /* ============ FULL EPISODE PLAYBACK (KOKORO & ELEVENLABS) ============ */
+  /* ============ FULL AUDIO PLAYBACK ============ */
   var speaking=false;
 
-  function getFullScript(){
-    return history.filter(function(m){return m.role==="assistant";}).map(function(m){return m.content;}).join("\n\n");
-  }
-
   function buildSegments(){
-    var full=getFullScript(); if(!full) return [];
-    var hostMap = {};
+    var full=history.filter(function(m){return m.role==="assistant";}).map(function(m){return m.content;}).join("\n\n"); if(!full) return [];
+    var hostMap={};
     hosts.forEach(function(h, idx){
-      var nm = (h.name||("Host "+(idx+1))).trim();
+      var nm=(h.name||("Host "+(idx+1))).trim();
       var defaultKokoro = (idx === 0) ? "am_adam" : (idx === 1 ? "am_michael" : (idx === 2 ? "am_eric" : "am_onyx"));
-      hostMap[nm] = {
-        engine: h.engine || "kokoro",
-        kokoroVoice: h.kokoroVoice || defaultKokoro,
-        elevenVoiceId: getEffectiveElevenVoiceId(h),
-        rate: h.rate || 1
-      };
+      hostMap[nm]={ engine:h.engine||"kokoro", kokoroVoice:h.kokoroVoice||defaultKokoro, elevenVoiceId:getEffectiveElevenVoiceId(h), rate:h.rate||1 };
     });
-
-    var lines = full.split("\n");
-    var segs = [];
-    var currentSpeaker = Object.keys(hostMap)[0] || "Host 1";
-
+    var lines=full.split("\n"); var segs=[]; var currentSpeaker=Object.keys(hostMap)[0]||"Host 1";
     lines.forEach(function(line){
-      var trimmed = line.trim();
-      if(!trimmed) return;
-      for(var name in hostMap){
-        if(trimmed.indexOf(name+":") === 0){
-          currentSpeaker = name;
-          trimmed = trimmed.slice(name.length + 1).trim();
-          break;
-        }
-      }
+      var trimmed=line.trim(); if(!trimmed) return;
+      for(var name in hostMap){ if(trimmed.indexOf(name+":")===0){ currentSpeaker=name; trimmed=trimmed.slice(name.length+1).trim(); break; } }
       if(trimmed){
-        var info = hostMap[currentSpeaker] || { engine:"kokoro", kokoroVoice:"am_adam", elevenVoiceId:"bIHbv24MWmeRgasZH58o", rate:1 };
-        segs.push({
-          speaker: currentSpeaker,
-          text: trimmed,
-          engine: info.engine,
-          kokoroVoice: info.kokoroVoice,
-          elevenVoiceId: info.elevenVoiceId,
-          rate: info.rate
-        });
+        var info=hostMap[currentSpeaker]||{ engine:"kokoro", kokoroVoice:"am_adam", elevenVoiceId:"bIHbv24MWmeRgasZH58o", rate:1 };
+        segs.push({ speaker:currentSpeaker, text:trimmed, engine:info.engine, kokoroVoice:info.kokoroVoice, elevenVoiceId:info.elevenVoiceId, rate:info.rate });
       }
     });
     return segs;
   }
 
   async function speakKokoro(){
-    clearErr();
-    var segs = buildSegments();
-    if(!segs.length){ showErr("Write an episode first, then press Play."); return; }
-    stopSpeak();
-    var tts = await ensureKokoro();
-    if(!tts) return;
-
-    speaking = true;
-    if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-    for(var i=0; i<segs.length; i++){
-      if(!speaking) break;
-      var s = segs[i];
-      updateStatus("Generating Kokoro speech for " + s.speaker + " (" + (i+1) + " of " + segs.length + ")...");
+    clearErr(); var segs=buildSegments(); if(!segs.length){ showErr("Write an episode first, then press Play."); return; }
+    stopSpeak(); var tts=await ensureKokoro(); if(!tts) return;
+    speaking=true; var ctx=await ensureAudioContext();
+    for(var i=0;i<segs.length;i++){
+      if(!speaking) break; var s=segs[i]; updateStatus("Speaking "+s.speaker+" ("+(i+1)+" of "+segs.length+")...");
       try{
-        var raw = await tts.generate(s.text, {
-          voice: s.kokoroVoice,
-          speed: s.rate
-        });
+        var raw=await tts.generate(s.text,{ voice:s.kokoroVoice, speed:s.rate });
         if(!speaking) break;
-        await playSegmentPromise(raw);
-      }catch(e){
-        showErr("Kokoro playback issue: " + e.message);
-      }
+        await new Promise(function(resolve){
+          var buffer=ctx.createBuffer(1,raw.audio.length,raw.sampling_rate); buffer.copyToChannel(raw.audio,0);
+          currentSource=ctx.createBufferSource(); currentSource.buffer=buffer; currentSource.connect(ctx.destination);
+          currentSource.onended=function(){ resolve(); }; currentSource.start();
+        });
+      }catch(e){ showErr("Kokoro issue: "+e.message); }
     }
-    speaking = false;
-    updateStatus("");
-  }
-
-  function playSegmentPromise(rawAudio){
-    return new Promise(function(resolve){
-      var buffer = audioContext.createBuffer(1, rawAudio.audio.length, rawAudio.sampling_rate);
-      buffer.copyToChannel(rawAudio.audio, 0);
-      currentSource = audioContext.createBufferSource();
-      currentSource.buffer = buffer;
-      currentSource.connect(audioContext.destination);
-      currentSource.onended = function(){ resolve(); };
-      currentSource.start();
-    });
+    speaking=false; updateStatus("");
   }
 
   async function speakElevenLabs(){
-    clearErr();
-    var key = gEleven();
-    if(!key){
-      showErr("To play with ElevenLabs, open Keys and Setup at the top and paste your ElevenLabs API Key.");
-      return;
-    }
-    var segs = buildSegments();
-    if(!segs.length){ showErr("Write an episode first, then press Play."); return; }
-    stopSpeak();
-    speaking = true;
-
-    for(var i=0; i<segs.length; i++){
-      if(!speaking) break;
-      var s = segs[i];
-      updateStatus("Generating ElevenLabs audio for " + s.speaker + " (" + (i+1) + " of " + segs.length + ")...");
+    clearErr(); var key=gEleven(); if(!key){ showErr("Enter your ElevenLabs API key in Keys and Setup."); return; }
+    var segs=buildSegments(); if(!segs.length){ showErr("Write an episode first, then press Play."); return; }
+    stopSpeak(); speaking=true;
+    for(var i=0;i<segs.length;i++){
+      if(!speaking) break; var s=segs[i]; updateStatus("Speaking "+s.speaker+" ("+(i+1)+" of "+segs.length+")...");
       try{
-        var res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + s.elevenVoiceId, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "xi-api-key": key },
-          body: JSON.stringify({
-            text: s.text,
-            model_id: "eleven_multilingual_v2",
-            voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-          })
+        var res=await fetch("https://api.elevenlabs.io/v1/text-to-speech/"+s.elevenVoiceId, {
+          method:"POST", headers:{"Content-Type":"application/json","xi-api-key":key},
+          body:JSON.stringify({ text:s.text, model_id:"eleven_multilingual_v2", voice_settings:{stability:0.5,similarity_boost:0.75} })
         });
-        if(!res.ok){
-          var errText = await res.text();
-          throw new Error("ElevenLabs error: " + res.status + " " + errText);
-        }
-        var blob = await res.blob();
-        if(!speaking) break;
-        await playBlobPromise(blob);
-      }catch(e){
-        showErr(e.message);
-        break;
-      }
+        if(!res.ok) throw new Error("ElevenLabs error: "+res.status);
+        var blob=await res.blob(); if(!speaking) break;
+        await new Promise(function(resolve){
+          var url=URL.createObjectURL(blob); activeAudioElement=new Audio(url);
+          activeAudioElement.onended=function(){ resolve(); }; activeAudioElement.onerror=function(){ resolve(); }; activeAudioElement.play();
+        });
+      }catch(e){ showErr(e.message); break; }
     }
-    speaking = false;
-    updateStatus("");
-  }
-
-  function playBlobPromise(blob){
-    return new Promise(function(resolve){
-      var url = URL.createObjectURL(blob);
-      activeAudioElement = new Audio(url);
-      activeAudioElement.onended = function(){ resolve(); };
-      activeAudioElement.onerror = function(){ resolve(); };
-      activeAudioElement.play();
-    });
+    speaking=false; updateStatus("");
   }
 
   function stopSpeak(){
-    speaking = false;
-    if(activeAudioElement){
-      try{ activeAudioElement.pause(); activeAudioElement.currentTime = 0; }catch(e){}
-      activeAudioElement = null;
-    }
-    if(currentSource){
-      try{ currentSource.stop(); }catch(e){}
-      currentSource = null;
-    }
+    speaking=false;
+    if(activeAudioElement){ try{ activeAudioElement.pause(); activeAudioElement.currentTime=0; }catch(e){} activeAudioElement=null; }
+    if(currentSource){ try{ currentSource.stop(); }catch(e){} currentSource=null; }
     updateStatus("");
   }
 
@@ -1038,13 +546,11 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
   $("#playElevenBtn").addEventListener("click", speakElevenLabs);
   $("#stopBtn").addEventListener("click", stopSpeak);
 
-  /* ============ KEYS AND SETUP ============ */
+  /* ============ SETUP ============ */
   function setupField(labelText, val, k, isSecret){
-    var box=document.createElement("div");
-    var l=document.createElement("label"); l.className="field"; l.textContent=labelText;
-    var inp=document.createElement("input"); inp.type = isSecret ? "password" : "text"; inp.value=val||"";
-    inp.setAttribute("data-k",k); inp.setAttribute("autocomplete","off"); inp.setAttribute("spellcheck","false");
-    box.appendChild(l); box.appendChild(inp); return box;
+    var box=document.createElement("div"); var l=document.createElement("label"); l.className="field"; l.textContent=labelText;
+    var inp=document.createElement("input"); inp.type=isSecret?"password":"text"; inp.value=val||"";
+    inp.setAttribute("data-k",k); box.appendChild(l); box.appendChild(inp); return box;
   }
 
   function renderSetup(){
@@ -1053,31 +559,21 @@ var MODELS = ["gemini-2.5-flash","gemini-3.5-flash-lite","gemini-3.6-flash"];
     box.appendChild(setupField("Supabase anon public key", gSupaKey(), "supaKey", true));
     box.appendChild(setupField("Google Gemini key (free)", gGemini(), "gemini", true));
     box.appendChild(setupField("ElevenLabs API key (optional)", gEleven(), "eleven", true));
-    
-    var b=document.createElement("button");
-    b.textContent="Save keys";
-    b.style.cssText="min-height:48px; padding:0 24px; margin-top:16px; border:none; border-radius:10px; font-weight:700; font-family:'Raleway',sans-serif; font-size:1rem; background:var(--blue); color:#000000; cursor:pointer;";
+    var b=document.createElement("button"); b.textContent="Save keys";
+    b.style.cssText="min-height:48px; padding:0 24px; margin-top:16px; border:none; border-radius:10px; font-weight:700; font-family:'Raleway',sans-serif; font-size:1rem; background:var(--blue); color:var(--btn-text); cursor:pointer;";
     b.addEventListener("click", function(){
-      SET.supaUrl = (box.querySelector('[data-k="supaUrl"]').value||"").trim();
-      SET.supaKey = (box.querySelector('[data-k="supaKey"]').value||"").trim();
-      SET.gemini  = (box.querySelector('[data-k="gemini"]').value||"").trim();
-      SET.eleven  = (box.querySelector('[data-k="eleven"]').value||"").trim();
-      saveSettings(SET);
-      initSupa();
-      renderSaveArea(); loadLineups();
+      SET.supaUrl=(box.querySelector('[data-k="supaUrl"]').value||"").trim();
+      SET.supaKey=(box.querySelector('[data-k="supaKey"]').value||"").trim();
+      SET.gemini=(box.querySelector('[data-k="gemini"]').value||"").trim();
+      SET.eleven=(box.querySelector('[data-k="eleven"]').value||"").trim();
+      saveSettings(SET); initSupa(); renderSaveArea(); loadLineups();
       $("#setupMsg").innerHTML='<div class="ok">Saved. Your keys stay secure in this browser.</div>';
     });
     box.appendChild(b);
   }
 
-  // Boot
-  setSeats(2);
-  renderSetup();
+  setSeats(2); renderSetup();
   var setupBox=$("#setupBox"); if(setupBox){ setupBox.open = !gGemini(); }
-  initSupa();
-  renderSaveArea();
-  loadLineups();
+  initSupa(); renderSaveArea(); loadLineups();
 })();
 </script>
-</body>
-</html>
